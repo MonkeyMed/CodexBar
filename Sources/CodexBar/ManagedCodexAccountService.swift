@@ -333,7 +333,8 @@ final class ManagedCodexAccountService {
             version: snapshot.version,
             accounts: remaining))
 
-        if canDeleteHome, self.fileManager.fileExists(atPath: homeURL.path) {
+        let homeStillReferenced = remaining.contains { $0.managedHomePath == account.managedHomePath }
+        if canDeleteHome, homeStillReferenced == false, self.fileManager.fileExists(atPath: homeURL.path) {
             try? self.fileManager.removeItem(at: homeURL)
         }
     }

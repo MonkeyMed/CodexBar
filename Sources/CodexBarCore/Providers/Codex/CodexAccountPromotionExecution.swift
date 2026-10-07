@@ -185,9 +185,13 @@ package struct CodexDisplacedLivePreservationExecutor {
                 guard account.id == existingManagedAccount.id else { return account }
                 return repairedManagedAccount
             }))
-        if existingManagedAccount.managedHomePath != importedAccount.homeURL.path {
+        let replacedHomePath = existingManagedAccount.managedHomePath
+        let replacedHomeStillReferenced = persistedManagedAccounts.accounts.contains {
+            $0.id != existingManagedAccount.id && $0.managedHomePath == replacedHomePath
+        }
+        if replacedHomePath != importedAccount.homeURL.path, replacedHomeStillReferenced == false {
             try? self.removeManagedHomeIfSafe(
-                URL(fileURLWithPath: existingManagedAccount.managedHomePath, isDirectory: true))
+                URL(fileURLWithPath: replacedHomePath, isDirectory: true))
         }
 
         return .alreadyManaged(managedAccountID: existingManagedAccount.id)

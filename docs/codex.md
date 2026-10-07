@@ -108,8 +108,9 @@ emails require the UUID. The app and CLI share the same preservation and workspa
 live credentials are saved before an owner-only atomic replacement, and detected changes to either
 auth file abort the replacement. A nonblocking process lock serializes participating account writers
 and is released automatically after a crash. External Codex processes do not share that lock.
-Preservation also checks legacy email-only destinations and rechecks saved authentication before
-replacing or deleting a managed destination. Read failures or conflicting credentials abort the promotion.
+Preservation checks every selectable repair destination—provider-keyed or legacy email-only—and
+rechecks saved authentication before replacing or deleting a managed destination. Read failures or
+conflicting credentials abort the promotion.
 Refreshed copies are read back before their fingerprints are committed, and every preserved copy is checked
 again immediately before the live replacement. External writers can still race after the final read.
 
