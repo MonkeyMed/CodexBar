@@ -306,7 +306,8 @@ CLI install:
 - [AI Usage Limits](https://github.com/lenadweb/stream-deck-ai-limits) — Elgato Stream Deck integration for macOS: shows a selected CodexBar provider, account, and configurable quota or payload metrics on keys and Stream Deck+ dials, using local `codexbar serve`.
 
 ## Phone & web
-- [Starbridge](https://github.com/T0mSIlver/starbridge) — Android app and web page that show every machine's quota windows, with an alert before one runs out, read from the bundled CLI on macOS and Linux. It also brings your coding agents' questions to your phone.
+
+- [Starbridge](https://github.com/T0mSIlver/starbridge) — Community-maintained Android and web app that displays quota windows from the CodexBar CLI on macOS and Linux, with optional quota alerts.
 
 ## Credits
 Inspired by [ccusage](https://github.com/ryoppippi/ccusage) (MIT), specifically the cost usage tracking.
