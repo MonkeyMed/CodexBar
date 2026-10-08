@@ -762,6 +762,9 @@ extension CodexBarCLI {
             server.stop()
         }
         defer { signalMonitor.cancel() }
+        let stallMonitor = CLIServeStallMonitor()
+        stallMonitor.start()
+        defer { stallMonitor.stop() }
 
         do {
             try await server.run {
