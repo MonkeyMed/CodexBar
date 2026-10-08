@@ -64,9 +64,6 @@ public enum SubprocessRunner {
     }
 
     private static func timeoutInterval(_ timeout: TimeInterval) -> DispatchTimeInterval {
-        guard timeout.isFinite else {
-            return .seconds(Int.max)
-        }
         let nanoseconds = max(0, timeout * 1_000_000_000).rounded(.towardZero)
         return .nanoseconds(Int(exactly: nanoseconds) ?? Int.max)
     }
