@@ -154,26 +154,9 @@ protocol UpdaterProviding: AnyObject {
     var automaticallyDownloadsUpdates: Bool { get set }
     var isAvailable: Bool { get }
     var unavailableReason: String? { get }
-    var manualUpdateCommand: ManualUpdateCommand? { get }
     var updateStatus: UpdateStatus { get }
     func checkForUpdates(_ sender: Any?)
     func installUpdate()
-}
-
-extension UpdaterProviding {
-    var manualUpdateCommand: ManualUpdateCommand? {
-        nil
-    }
-}
-
-enum ManualUpdateCommand: Sendable {
-    case homebrew
-
-    var command: String {
-        switch self {
-        case .homebrew: "brew upgrade --cask codexbar"
-        }
-    }
 }
 
 /// No-op updater used for debug builds and non-bundled runs to suppress Sparkle dialogs.
@@ -182,12 +165,10 @@ final class DisabledUpdaterController: UpdaterProviding {
     var automaticallyDownloadsUpdates: Bool = false
     let isAvailable: Bool = false
     let unavailableReason: String?
-    let manualUpdateCommand: ManualUpdateCommand?
     let updateStatus = UpdateStatus()
 
-    init(unavailableReason: String? = nil, manualUpdateCommand: ManualUpdateCommand? = nil) {
+    init(unavailableReason: String? = nil) {
         self.unavailableReason = unavailableReason
-        self.manualUpdateCommand = manualUpdateCommand
     }
 
     func checkForUpdates(_ sender: Any?) {}
@@ -197,17 +178,10 @@ final class DisabledUpdaterController: UpdaterProviding {
 @MainActor
 @Observable
 final class UpdateStatus {
-    static let disabled = UpdateStatus()
-    var isUpdateReady: Bool
+    var isUpdateReady = false
     /// A newer version that can be installed on demand, for updaters that do not stage downloads.
     var availableVersion: String?
-    var isInstalling: Bool
-
-    init(isUpdateReady: Bool = false, availableVersion: String? = nil, isInstalling: Bool = false) {
-        self.isUpdateReady = isUpdateReady
-        self.availableVersion = availableVersion
-        self.isInstalling = isInstalling
-    }
+    var isInstalling = false
 }
 
 #if canImport(Sparkle) && ENABLE_SPARKLE
@@ -348,13 +322,9 @@ private func makeUpdaterController() -> UpdaterProviding {
     }
 
     if InstallOrigin.isHomebrewCask(appBundleURL: bundleURL) {
-        // One-click updates only apply to side-loaded tap installs; the app's own tap is the
-        // supported update feed. Official homebrew/cask installs stay managed by Homebrew.
-        if InstallOrigin.homebrewCaskTap(appBundleURL: bundleURL) == "steipete/tap" {
-            return HomebrewUpdaterController(
-                savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true)
-        }
-        return DisabledUpdaterController(unavailableReason: L("Managed by Homebrew"))
+        return HomebrewUpdaterController(
+            savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true,
+            notifier: HomebrewUpdateNotifier(dependencies: .live))
     }
 
     guard isDeveloperIDSigned(bundleURL: bundleURL) else {
@@ -403,6 +373,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var codexAccountPromotionCoordinator: CodexAccountPromotionCoordinator?
     private var cloudSyncCoordinator: CloudSyncCoordinator?
     private var settingsWindowController: SettingsWindowController?
+    private var pendingUpdateSettingsOpen = false
     private lazy var placeholderSettingsWindowGuard = PlaceholderSettingsWindowGuard(
         isKnownSettingsWindow: { [weak self] window in
             self?.settingsWindowController?.window === window
@@ -446,10 +417,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 await self.runProviderLoginFlow(provider)
             })
+        if self.pendingUpdateSettingsOpen {
+            self.pendingUpdateSettingsOpen = false
+            self.openSettings(pane: .about)
+        }
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         MenuBarStatusItemWindowProbe.trace("will-finish-launching")
+        AppNotifications.shared.configureUpdateAction { [weak self] in
+            guard let self else { return }
+            if self.settingsWindowController == nil {
+                self.pendingUpdateSettingsOpen = true
+            } else {
+                self.openSettings(pane: .about)
+            }
+        }
         self.configureAppIconForMacOSVersion()
         // The SwiftUI `Settings` scene is an empty placeholder; macOS otherwise presents it at launch.
         self.placeholderSettingsWindowGuard.start()
