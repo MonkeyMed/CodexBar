@@ -18,6 +18,7 @@ import FoundationNetworking
 @main
 enum CodexBarCLI {
     static func main() async {
+        self.configureGlibcMallocArenasIfNeeded()
         if CodexBarCoreResourceSmoke.isRequested() {
             #if canImport(Darwin)
             Darwin.exit(CodexBarCoreResourceSmoke.run())
