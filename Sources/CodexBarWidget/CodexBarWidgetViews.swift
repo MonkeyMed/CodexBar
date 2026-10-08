@@ -762,6 +762,6 @@ enum WidgetFormat {
         guard let summary, summary.isStale(comparedTo: entryUpdatedAt), let updatedAt = summary.updatedAt else {
             return Text(base)
         }
-        return Text("\(base) · \(Text(updatedAt, style: .relative))")
+        return Text("\(base) · \(WidgetDateText.age(updatedAt))")
     }
 }
