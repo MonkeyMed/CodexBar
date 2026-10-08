@@ -251,6 +251,35 @@ struct SessionToolActivityTests {
     }
 
     @Test
+    func `replacing a log with preserved size and date invalidates details`() async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        try fixture.write([Self.record(id: "same", type: "CommandExecution", extra: [
+            "aggregated_output": "before", "exit_code": 0,
+        ])])
+        // Use an exact timestamp: filesystem setters can round fractional dates differently.
+        let modified = Date(timeIntervalSince1970: 1_700_000_000)
+        try FileManager.default.setAttributes([.modificationDate: modified], ofItemAtPath: fixture.url.path)
+        let store = SessionToolActivityStore()
+        let first = try await store.load(source: fixture.source)
+        try fixture.write([Self.record(id: "same", type: "CommandExecution", extra: [
+            "aggregated_output": "after!", "exit_code": 0,
+        ])])
+        try FileManager.default.setAttributes(
+            [.modificationDate: first.modificationDate],
+            ofItemAtPath: fixture.url.path)
+        let second = try await store.load(source: fixture.source)
+        #expect(second.fileSize == first.fileSize)
+        #expect(second.modificationDate == first.modificationDate)
+        #expect(second.fileNumber != first.fileNumber)
+        await #expect(throws: SessionToolActivityError.sourceChanged) {
+            try await store.details(operation: #require(first.operations.first), snapshot: first)
+        }
+        let details = try await store.details(operation: #require(second.operations.first), snapshot: second)
+        #expect(details.output == "after!")
+    }
+
+    @Test
     func `missing native identity or time marks partial coverage without assigning foreign history`() async throws {
         let fixture = try Fixture()
         defer { fixture.remove() }

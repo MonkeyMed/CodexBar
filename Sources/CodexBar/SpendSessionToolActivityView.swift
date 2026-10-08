@@ -207,6 +207,7 @@ struct SpendToolOperationRow: View {
         let source: SessionToolActivitySource
         let modified: Date
         let size: UInt64
+        let fileNumber: UInt64
     }
 
     var body: some View {
@@ -266,7 +267,8 @@ struct SpendToolOperationRow: View {
             hidden: self.hidePersonalInfo,
             source: self.snapshot.source,
             modified: self.snapshot.modificationDate,
-            size: self.snapshot.fileSize))
+            size: self.snapshot.fileSize,
+            fileNumber: self.snapshot.fileNumber))
         {
             guard self.expanded, !self.hidePersonalInfo else { return }
             self.error = false

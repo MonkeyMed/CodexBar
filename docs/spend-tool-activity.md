@@ -46,7 +46,7 @@ credentials, provider calls, tracing configuration, or execution of recorded com
 The section deliberately describes operations in the selected local log, not a guaranteed whole-session
 history. Older clients may have no native operation records. Cross-session rankings/trends, full call
 trees, retry inference, billing attribution, and other-provider support are outside this first version.
-English, Simplified Chinese and Traditional Chinese copy is supplied; other catalogs explicitly carry
+English, Simplified Chinese, Traditional Chinese and Italian copy is supplied; other catalogs explicitly carry
 English fallback strings pending translation.
 
 ## Validation

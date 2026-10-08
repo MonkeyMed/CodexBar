@@ -60,7 +60,8 @@ public struct SessionToolActivitySnapshot: Sendable, Equatable {
     public let isPartial: Bool
     public let fileSize: UInt64
     public let modificationDate: Date
-    let fileNumber: UInt64
+    /// Distinguishes a replaced file even when its size and modification date are preserved.
+    public let fileNumber: UInt64
 
     public func operations(in range: Range<Date>?) -> [SessionToolOperation] {
         guard let range else { return self.operations }
