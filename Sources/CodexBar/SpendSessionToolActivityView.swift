@@ -32,7 +32,8 @@ struct SpendSessionToolActivityView: View {
             VStack(alignment: .leading, spacing: 12) {
                 if self.loading {
                     ProgressView(L("spend_tools_loading")).controlSize(.small)
-                } else if self.error {
+                }
+                if self.error {
                     Text(L("spend_tools_unavailable")).foregroundStyle(.secondary)
                 } else if let snapshot = self.snapshot, snapshot.source == self.source {
                     SpendToolActivityContent(
