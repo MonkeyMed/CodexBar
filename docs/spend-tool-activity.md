@@ -49,6 +49,16 @@ trees, retry inference, billing attribution, and other-provider support are outs
 English, Simplified Chinese, Traditional Chinese and Italian copy is supplied; other catalogs explicitly carry
 English fallback strings pending translation.
 
+## Synthetic UI examples
+
+These production SwiftUI renders use entirely fictitious session names, commands, timing and token
+samples. They illustrate the expanded content; the session's Tool activity section starts collapsed.
+They are separate from native app interaction checks and contain no personal log data.
+
+![Synthetic tool activity, wide light layout](images/spend-tool-activity-light.png)
+
+![Synthetic tool activity, narrow dark review filter](images/spend-tool-activity-dark.png)
+
 ## Validation
 
 Focused production parser/dashboard tests cover native ownership, repeated terminal updates, large
