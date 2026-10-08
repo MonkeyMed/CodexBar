@@ -23,6 +23,7 @@
 
 ### Fixed
 
+- Codex: keep managed credential homes still referenced by another saved account during removal or import repair (#4342). Thanks @vincent-peng!
 - Codex: show first-refresh authentication errors after saved credentials rotate, and discard errors when those credentials change again (#4364). Thanks @Yuxin-Qiao!
 - CI: skip Linux CLI builds for documentation and site-only changes using the shared macOS path gate, while retaining required checks for source, tests, and workflows (#4373). Thanks @Yuxin-Qiao!
 - Usage & Spend: reduce annual token activity update work by reusing calendar dates, coverage, and localized date formatters without changing chart output (#4328). Thanks @Yuxin-Qiao!
