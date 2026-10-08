@@ -14,6 +14,20 @@ import Testing
 struct MenuBarLayoutRendererTests {
     let now = Date(timeIntervalSince1970: 1_752_768_000)
 
+    @Test(arguments: [UsageProvider.codex, .claude], [false, true])
+    func `provider weekly lane token renders without a window prefix`(provider: UsageProvider, showUsed: Bool) {
+        let token = MenuBarLayoutToken.lanePercent(lane: .secondary)
+        #expect(MenuBarLayoutPaletteTokens.usage(provider: provider, snapshot: nil).contains(token))
+        let output = MenuBarLayoutRenderer().render(
+            layout: MenuBarLayout(lines: [[token]]),
+            data: self.data(provider: provider),
+            icon: nil,
+            options: self.options(showUsed: showUsed))
+        let expected = showUsed ? "9%" : "91%"
+        #expect(output.attributedTitle.string == expected)
+        #expect(output.accessibilityLabel == L("%@ %@", L("Weekly"), expected))
+    }
+
     @Test
     func `renderer composes every token with live values`() {
         let renderer = MenuBarLayoutRenderer()
@@ -1810,7 +1824,7 @@ struct MenuBarLayoutRendererTests {
         MenuBarLayoutRenderData(
             provider: provider,
             iconKey: "codex",
-            providerName: "Codex",
+            providerName: ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName,
             accountLabel: accountLabel,
             laneLabels: laneLabels ?? MenuBarLayoutLaneLabels(provider: provider, snapshot: nil),
             primary: MenuBarLayoutRenderWindow(RateWindow(
@@ -1879,8 +1893,10 @@ struct MenuBarLayoutRendererTests {
         conditionals: [MenuBarLayoutConditional] = [],
         isDebugApp: Bool = false,
         colorPace: Bool = false,
+        colorByProvider: Bool = false,
         highContrast: Bool = false,
         appearanceName: String = "aqua",
+        isHighlighted: Bool = false,
         forceStackedStyle: Bool = false) -> MenuBarLayoutRenderOptions
     {
         MenuBarLayoutRenderOptions(
@@ -1891,9 +1907,11 @@ struct MenuBarLayoutRendererTests {
             appearanceName: appearanceName,
             isDebugApp: isDebugApp,
             isStale: isStale,
+            isHighlighted: isHighlighted,
             now: now ?? self.now,
             verticalAdjustment: verticalAdjustment,
             colorPace: colorPace,
+            colorByProvider: colorByProvider,
             forceStackedStyle: forceStackedStyle)
     }
 

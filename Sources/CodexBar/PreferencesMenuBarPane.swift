@@ -54,6 +54,10 @@ struct MenuBarPane: View {
                         subtitle: paceColorSubtitle)
                 }
                 .disabled(self.settings.menuBarIconStyle != .iconAndPercent)
+
+                Toggle(isOn: self.$settings.menuBarColorByProvider) {
+                    Text(L("Color by provider"))
+                }
             } header: {
                 Text(L("section_icon"))
             }
@@ -111,12 +115,8 @@ struct MenuBarPane: View {
                     })
                     .disabled(!self.settings.mergeIcons)
 
-                Toggle(isOn: self.$settings.menuBarShowsHighestUsage) {
-                    SettingsRowLabel(
-                        L("show_most_used_provider_title"),
-                        subtitle: L("show_most_used_provider_subtitle"))
-                }
-                .disabled(!self.settings.mergeIcons || self.mergedIconPresentation.effectiveStyle == .stacked)
+                UnifiedIconSourcePicker(selection: self.$settings.unifiedIconSource)
+                    .disabled(!self.settings.mergeIcons || self.mergedIconPresentation.effectiveStyle == .stacked)
 
                 self.overviewProviderRow
                     .disabled(!self.settings.mergeIcons)

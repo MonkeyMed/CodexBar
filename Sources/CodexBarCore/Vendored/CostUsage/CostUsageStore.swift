@@ -122,6 +122,12 @@ actor CostUsageStore {
         parserHash: CodexParserHash.value)
     static let cacheGeneration = "sqlite:\(CostUsageStore.schemaVersion)"
     static let compatiblePredecessorParserHashes: Set<String> = [
+        "c0f8e9be04d824c2", // Revision 11 billing survives stricter completion timing validation.
+        "89c0662767e633ea", // Current main row-string sharing survives bounded timing backfill.
+        "e1088fb29c221187", // Revision 11 timing survives value-preserving row-string sharing.
+        "7ff985e81e281a11", // Current main accounting survives bounded timing backfill.
+        "865cef15206ea5c0", // Revision 10 timing survives upstream accounting correction.
+        "d35c9fb00bee059b", // Revision 9 timing survives upstream accounting correction.
         "99d920977063318a", // Preserve the saved-pricing migration before revision 9 reparses mirrors.
         "ed735dc27ffa70d9", // 0.72.0 rows and checkpoints are kept; revision 9 reparses duplicate ledger mirrors.
         "029fe80aa98f27e8", // Revision 7 caches retain history during bounded JSON-fallback reparsing.
@@ -175,11 +181,12 @@ actor CostUsageStore {
         "5f8507161b23757c", // 0.54.2 tokscale parity + priority evidence; persisted row shape unchanged.
     ]
     static let incompatibleRetainedReportPredecessorParserHashes: Set<String> = [
+        "865cef15206ea5c0",
+        "d35c9fb00bee059b",
         "99d920977063318a",
         "dd19ffa2dcfa8d47",
         "2d17f4981b78d07f",
         "8050a4faf4fddb96",
-        "99d920977063318a",
         "ed735dc27ffa70d9",
     ]
 

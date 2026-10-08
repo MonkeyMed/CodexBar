@@ -955,6 +955,12 @@ extension CostUsageStoreTests {
 
 extension CostUsageStoreTests {
     @Test(arguments: [
+        "c0f8e9be04d824c2", // Timing before supplied start timestamps were validated.
+        "89c0662767e633ea", // Upstream row-string sharing before timing.
+        "e1088fb29c221187", // Timing before value-preserving row-string sharing.
+        "7ff985e81e281a11", // Upstream accounting before timing.
+        "865cef15206ea5c0", // Advanced timing before upstream accounting correction.
+        "d35c9fb00bee059b", // Initial timing before upstream accounting correction.
         "ed735dc27ffa70d9", // Current release before session-tier evidence.
         "99d920977063318a", // Scheduling diagnostics retain history and checkpoints.
         "029fe80aa98f27e8", // Before the shared JSON fallback.
@@ -1003,6 +1009,12 @@ extension CostUsageStoreTests {
         let fixture = try StoreFixture()
         defer { fixture.remove() }
         #expect(CostUsageStore.compatiblePredecessorParserHashes == [
+            "c0f8e9be04d824c2",
+            "89c0662767e633ea",
+            "e1088fb29c221187",
+            "7ff985e81e281a11",
+            "865cef15206ea5c0",
+            "d35c9fb00bee059b",
             "99d920977063318a",
             "ed735dc27ffa70d9",
             "029fe80aa98f27e8",
@@ -1113,7 +1125,9 @@ extension CostUsageStoreTests {
         let current = CostUsageStore(cacheRoot: fixture.root)
         let after = await current.readSnapshot()
         var expected = before
-        if ["ed735dc27ffa70d9", "99d920977063318a"].contains(predecessorHash) {
+        if ["ed735dc27ffa70d9", "99d920977063318a", "865cef15206ea5c0", "d35c9fb00bee059b"]
+            .contains(predecessorHash)
+        {
             // These reports predate corrected pricing and coverage; native history still survives intact.
             expected.metadata.previousReportPayload = nil
         }

@@ -13,6 +13,15 @@ The **Plan Usage** submenu includes recorded remaining-quota burndown above util
 using the same Session, Weekly, and Sonnet labels. See [recorded quota burndown](widgets/burndown-proof.md)
 for capture-age semantics and the existing history retention/privacy behavior.
 
+OAuth history uses a stable account/profile identity after two stable credential observations corroborate that
+binding. External token rotations therefore continue the same history after the new credential is corroborated.
+Saved token-scoped fragments with matching verified bindings migrate into that account's history on a successful
+sample. Unbound fragments, obsolete bindings, and other accounts stay separate; correcting a conflicting binding
+preserves its ambiguous old fragment without attributing it to the newly confirmed account. If that fragment was
+already merged, the affected account bucket is preserved but hidden, and fresh samples start a new account scope.
+This quarantine survives empty responses and restarts. Explicit OAuth tokens without Claude Code account evidence
+remain credential-scoped.
+
 Claude supports three usage data paths plus local cost usage. The main provider pipeline uses runtime-specific
 automatic selection, but the codebase still has multiple active Claude `.auto` decision sites while the refactor is
 pending. For the exact current-state parity contract, see
@@ -212,6 +221,23 @@ the cookie import.
   (`default_claude_max_5x` / `default_claude_max_20x`), it is surfaced in the label as "Max 5x" / "Max 20x".
 
 ## Web API (cookies)
+- Optional subscription dates come from `GET /api/organizations/{org_id}/subscription_details` on `claude.ai`,
+  using an existing manual or cached session cookie. They do not come from the quota response or OAuth expiry.
+  `next_charge_at` / `next_charge_date` supply renewal; `plan_ending_at` / `plan_ending_before` supply paid-access
+  expiration and take precedence over renewal. Calendar-only dates stay calendar-only when displayed.
+- The menu and Settings preview reuse the shared subscription row. Missing, unavailable, or unrecognized billing
+  data does not invent a date or fail usage. CLI JSON exposes `subscriptionRenewsAt` / `subscriptionExpiresAt`
+  and a corresponding `...IsDateOnly: true` when the server only supplies a calendar date.
+- OAuth enrichment additionally verifies the OAuth profile's account and organization against the cookie session
+  before and after billing. OAuth credentials alone cannot fetch these dates. No cookie discovery, credential
+  repair, sign-in, or new Keychain access is performed for billing; cookie source Off disables it.
+- App and CLI use the same provider fetch and normal account-scoped publication. Billing has a separate two-second
+  total budget after quota succeeds; expiry, errors, or a changed verified owner leave successful quota intact.
+  No delayed billing task writes back into an already published snapshot, and dates are not carried across refreshes.
+- Availability is determined by the authenticated billing response, not the Pro/Max/Team/Enterprise plan label.
+  The fixtures cover the reported subscription schema, including cancellation and absent dates; they do not
+  establish that every plan or organization role can access this endpoint. Team/Enterprise billing access and
+  live cancelled subscriptions remain unverified. Quota resets and Extra usage balances are independent.
 - Session quota warnings ignore a weekly quota promoted into the primary field when the five-hour payload is missing. Existing session warning history stays tied to its account, and weekly warnings continue independently.
 - Preferences → Providers → Claude → Cookie source (Automatic or Manual).
 - Manual mode accepts a `Cookie:` header from a claude.ai request.
@@ -254,7 +280,7 @@ the cookie import.
   - Session + weekly + model-specific percent used.
   - A missing session measurement does not render as 100% remaining. Measured weekly and extra windows stay visible; when only a synthetic session placeholder exists, menus and plain CLI output report that limits are unavailable. Raw JSON retains the placeholder for diagnostics.
   - Daily Routines extra window when returned by the usage API.
-  - Extra usage spend/limit (if enabled).
+  - Extra usage spend/limit (if enabled). Compact Overview keeps this section when no measured quota bars exist, including Enterprise accounts with unavailable limits.
   - Remaining Usage credits balance (if enabled).
   - Account email + inferred plan.
   - Limit Reset Credits (see below).
@@ -282,6 +308,10 @@ the cookie import.
     does not report saved reset credits, and optional Web enrichment never adds Web credits to another source,
     even when the account matches. The menu replaces the generic details row with one shared reset-credit section.
     CodexBar never redeems a reset; use Claude on the web or Claude Desktop.
+
+Enterprise spend details depend on the selected source. Auto stops at the first successful OAuth/CLI/Web result;
+it does not import a missing monthly spend cap from a different session. Select **Web API (cookies)** for
+browser-only billing details, and enable **Show credits and extra usage** to display them.
 
 ## Cloud-session credits
 
@@ -417,7 +447,7 @@ Model-scoped weekly-window proof (synthetic data, no real accounts or credential
 - Default behavior: exit after each probe; Debug → "Keep CLI sessions alive" keeps it running between probes.
 - Both PTY probes and the non-PTY `/usage` fallback pass `--settings '{"remoteControlAtStartup":false,"disableAllHooks":true}'` to disable Remote Control startup and user hooks for the probe process. This process-local override leaves the user's saved settings unchanged; Claude's managed-settings policy still applies.
 - Both launches use `--strict-mcp-config` to skip the user's configured MCP servers. Saved nonessential-traffic restrictions remain in force.
-- A PTY timeout or usage-loading failure can trigger the non-PTY `/usage` fallback. Cancellation and rate limits stop the probe; a subscription-only notice from the fallback takes precedence over the original PTY failure.
+- A PTY timeout or usage-loading failure can trigger the non-PTY `/usage` fallback. Cancellation and rate limits stop the probe; a subscription-only notice from the fallback takes precedence over the original PTY failure. An insights-only report is not evidence that the account lacks quotas: it preserves the original PTY failure, which is also logged before fallback.
 - Transient CLI timeouts and loading stalls preserve availability already established for that account, so a later
   Auto refresh can retry CLI instead of stopping at missing OAuth credentials. They do not establish availability
   for a previously unverified account; the existing Keychain and prompt policies still apply.

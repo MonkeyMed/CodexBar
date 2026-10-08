@@ -13,23 +13,26 @@ The **Plan Usage** submenu includes recorded remaining-quota burndown above util
 including saved Monthly windows. See [recorded quota burndown](widgets/burndown-proof.md)
 for capture-age semantics and the existing history retention/privacy behavior.
 
-Codex has three automatic usage data paths (OAuth API, web dashboard, CLI RPC) plus a manual CLI PTY diagnostic parser and a local cost-usage scanner.
-The OAuth API is the default app source when credentials are available; web access is optional for dashboard extras.
+Codex reads account usage through PAT, OAuth, CLI RPC, or an explicitly selected web dashboard source.
+Local token/cost history is scanned separately; the CLI PTY parser is a manual diagnostic tool.
 
 ## Data sources + fallback order
 
-### App default selection (debug menu disabled)
-1) OAuth API (auth.json credentials).
-2) CLI RPC through `codex app-server`.
-3) If OpenAI web extras are enabled and a matching OpenAI web session is available (Automatic or Manual cookies),
-   dashboard extras load as a separate follow-up refresh and the source label becomes `primary + openai-web`.
+### Auto selection (app and CLI `--source auto`)
+1) PAT, when available.
+2) OAuth API (auth.json credentials).
+3) CLI RPC through `codex app-server`, unless a managed workspace is selected.
+
+Unavailable strategies are skipped. Authentication failures can allow fallback; network, server, and decode
+failures keep their original error. Stale external OAuth credentials fail closed. A managed workspace disables
+CLI fallback because the CLI cannot receive CodexBar's selected workspace header.
+
+If OpenAI web extras are enabled in the app and a matching OpenAI web session is available (Automatic or Manual
+cookies), dashboard extras load as a separate follow-up refresh and the source label becomes `primary + openai-web`.
+The web dashboard is not an Auto fallback; the CLI can select it explicitly with `--source web`.
 
 Usage source picker:
 - Preferences → Providers → Codex → Usage source (Auto/OAuth/CLI).
-
-### CLI default selection (`--source auto`)
-1) OpenAI web dashboard (when available).
-2) Codex CLI RPC through `codex app-server`.
 
 ### OAuth API (preferred for the app)
 - Reads OAuth tokens from `~/.codex/auth.json` (or `$CODEX_HOME/auth.json`).
@@ -40,6 +43,7 @@ Usage source picker:
   the explicit OAuth path delegates recovery to the Codex CLI, which owns that file. If the CLI is unavailable,
   the OAuth error is surfaced instead of mutating the shared file.
 - Calls `GET https://chatgpt.com/backend-api/wham/usage` (default) with `Authorization: Bearer <token>`.
+- A `chatgpt_base_url` setting in `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`) overrides the usage endpoint. Lines beginning with `#`, including indented comments, are ignored; a commented override cannot shadow an active setting later in the file. Trailing inline comments remain supported.
 - The app reads reset-credit inventory once per refresh with a best-effort
   `GET https://chatgpt.com/backend-api/wham/rate-limit-reset-credits` using the same account-scoped OAuth context;
   the CLI requests it only when optional credits are included.
@@ -97,8 +101,31 @@ Usage source picker:
   valid sibling readings, their original ages, errors, and credits in memory and across restart. Removed accounts
   and rows whose ownership no longer matches the current account list are pruned; refresh failures only invalidate
   the affected account's reading.
+- Settings → Providers → Codex shows each visible account's saved usage when multiple OAuth accounts are available.
+  Opening the pane reads the retained snapshots without starting a refresh. Each row keeps its own usage age and
+  error, including accounts not fetched yet, and distinguishes **CodexBar follows** from **System**.
+  **Hide personal information** uses the same numbered account and workspace labels as the account switcher.
+  Authorized OpenAI Code review usage remains on the followed account's row; sibling rows never inherit it,
+  and same-email ambiguity keeps the existing display-only dashboard policy.
+- Refresh an individual row or choose **Refresh all accounts** to visit every account in batches of up to six,
+  without changing the followed account or promoting credentials to System. The provider header keeps its existing
+  account-scoped refresh, including credits and OpenAI web extras. Zero or one account, and ambient PAT mode, keep
+  the single-account presentation. Local token/cost usage appears once, with its current-profile or **This Mac** scope.
 - Reusing OpenCode OAuth enables remote account quota, not OpenCode session token/cost ingestion. See
   [OpenCode with Codex or OpenAI](opencode.md#using-opencode-with-codex-or-openai) for the current history boundary.
+
+### “Codex auth.json needs refresh”
+
+This message comes from the local credential freshness check, before the usage HTTP request. Native credentials
+with a recognized token expiry need renewal within five minutes of expiry; otherwise CodexBar uses the saved
+`last_refresh` timestamp and an eight-day threshold. File modification time is not the freshness signal. Network,
+HTTP, and decoding errors have separate messages.
+
+CodexBar rereads credentials briefly in case their owner is replacing them. A later owner-CLI renewal can therefore
+restore OAuth usage without another login. A managed workspace still requires renewal in its own Codex home;
+successful web usage or a healthy custom proxy does not establish that credential's freshness or workspace identity.
+If the warning recurs, record the usage source, system/managed/profile selection, source label, and timestamps on
+both the failing and successful refresh. Do not share tokens or the contents of `auth.json`.
 
 ### Managed account CLI (macOS)
 
@@ -124,6 +151,21 @@ It does not renew expired credentials or enable unscoped fallback for managed wo
 use the affected row's **Reauthenticate** action or ordinary `codex login` scoped to that managed home
 and intended workspace. A future CLI renewal command needs staged login and identity/workspace
 validation before committing; `promote` is not a renewal workaround. See [CLI details](cli.md#managed-codex-accounts-macos).
+
+### Local account discovery
+
+`codexbar serve` exposes saved managed Codex accounts through `GET /accounts` and
+`GET /accounts/<id>`, alongside configured provider token accounts. Discovery reads the existing
+managed-account metadata only: it never opens managed homes, reads `auth.json`, migrates storage,
+refreshes usage, or switches accounts. System and advanced profile-home accounts are not included.
+The `active` flag means selected in CodexBar, not necessarily the system Codex identity.
+
+IDs remain stable across identity modes; treat them as opaque lookup keys. Without an explicit
+`--identity`, discovery follows the app's **Hide personal information** setting per request.
+Redacted mode replaces arbitrary labels with account placeholders and hides email local parts.
+Credentials, private paths, fingerprints, and provider-internal workspace IDs are never exported.
+See the [account discovery HTTP contract](dashboard-api.md#account-discovery) for authentication,
+response fields, and errors.
 
 ### Advanced profile-home accounts
 - Managed Codex accounts remain the default multi-account path.
@@ -269,6 +311,23 @@ and stable account numbers distinguish rows while usable workspace labels remain
 
 ## Cost usage (local log scan)
 
+Account quota and estimated API cost have different coverage. Remote quota can include work with no readable local
+token record. CodexBar cannot convert a quota percentage into dollars or recover missing token categories from it.
+
+| Source | Local token/cost coverage |
+| --- | --- |
+| Native Codex | Supported session and archived-session records in the selected home. |
+| Pi / OMP | Supported backend history; enable [Pi](pi.md) for a separate Usage & Spend source. Account-scoped Codex rows stay native. |
+| OpenCodex | Opt-in `~/.opencodex/usage.jsonl` (or `$OPENCODEX_HOME/usage.jsonl`), with recorded provider provenance. This is distinct from OpenCode's session database. |
+| OpenCode using OpenAI/Codex | No native session import; reusing its OAuth credentials only enables remote quota. The OpenCode Go SQLite reader selects `opencode-go` records. |
+| Amp | Account allowances and credits are supported, but Amp session-token history is not imported into Codex costs. |
+| Dots / cloud tasks | Included only when supported usage records are available in a scanned local source. There is no dots/cloud usage-history importer. |
+
+Dots can create cloud threads or delegate tasks to a connected computer; see the
+[official task documentation](https://learn.chatgpt.com/docs/dots/tasks-and-memory#assigned-work).
+A task appearing in the desktop app does not by itself establish local cost coverage. To investigate an omission,
+identify its execution location and a redacted model/token record, omitting conversation content and credentials.
+
 Usage & Spend includes this Mac's Codex session home even when the CLI keeps credentials in the OS keyring and
 there is no `auth.json`. Local cost estimates do not require account identity or a successful quota refresh.
 Managed and profile homes retain their separate history scopes; a home already represented by a visible account
@@ -373,6 +432,8 @@ the local result and returns a nonzero exit code. See [CLI host reporting](cli.m
     External writes invalidate cached data; database replacement or incompatible metadata reopens the reader through
     existing validation on its next access. Every read still reconciles file identities, and detailed report history
     remains transient. Scanner and writer connections keep separate ownership.
+  - Cached Codex rows share byte-identical turn-ID strings within each read, reducing retained memory for repeated turns.
+    The temporary string index ends with that read; persisted row values, Unicode spellings, and pricing stay unchanged.
   - Report, scan-baseline, and workspace reads decode stored usage rows as SQLite yields them, avoiding a second copy of the
     history as encoded payloads. Metadata and rows share one read transaction; filesystem reconciliation runs after
     it closes. Row order, pricing, malformed-row fallback, and incomplete coverage keep their existing behavior.
@@ -478,6 +539,13 @@ the local result and returns a nonzero exit code. See [CLI host reporting](cli.m
   parsed token rows or replay checkpoints, so compatible predecessor caches do not need a rebuild.
 
 ### Usage & Spend session rows
+
+Native Codex sessions with validated completed turns show whole-turn output, median model-first-token latency,
+and median duration below the cost-ranked header. The optional **Performance details** disclosure includes
+sample counts, percentile and cache coverage, and model/effort groups. Timing follows the selected completion
+day; billing keeps its existing request dates and range totals. No timing appears when samples are unavailable.
+Whole-turn output includes reasoning, tools, and waits; first model token can precede visible answer text.
+See the [metric contract and synthetic verification](spend-turn-performance-validation.md).
 
 Projects are grouped by account source and full directory identity, so equal folder names stay separate and
 renaming a project does not split its totals. Project and session rows use saved names from the selected Codex

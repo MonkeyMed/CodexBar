@@ -4,7 +4,7 @@ import Testing
 
 @Suite(.serialized)
 struct CostUsageRequestLedgerMigrationTests {
-    @Test(arguments: [5, 6, 7], [false, true])
+    @Test(arguments: [5, 6, 7, 8], [false, true])
     func `bounded ledger upgrades retain prior pricing across reopen and append`(
         revision: Int,
         priority: Bool) async throws
@@ -86,7 +86,8 @@ struct CostUsageRequestLedgerMigrationTests {
         let predecessorHash = switch revision {
         case 5: "4a4c4ef34ce6f037"
         case 6: "c61aebb9cf043a72"
-        default: "029fe80aa98f27e8"
+        case 7: "029fe80aa98f27e8"
+        default: "ed735dc27ffa70d9"
         }
         let predecessorVersion = CostUsageStore.combinedSchemaVersion(
             base: CostUsageStore.baseSchemaVersion, parserHash: predecessorHash)

@@ -170,6 +170,7 @@ final class UsageStore {
     @ObservationIgnored let widgetAccountSnapshotStore: (any WidgetAccountSnapshotStoring)?
     var tokenAccountLiveStateProviders: Set<ProviderInstanceID> = []
     var codexAccountSnapshots: [CodexAccountUsageSnapshot] = []
+    var codexSettingsRefreshingAccountIDs: Set<String> = []
     var kiloScopeSnapshots: [KiloScopeSnapshot] = []
     var claudeSwapAccountSnapshots: [ProviderAccountUsageSnapshot] = []
     var claudeSwapLastRefreshAt: Date?
@@ -578,7 +579,7 @@ final class UsageStore {
         self.startPlanUtilizationHistoryLoad(
             gate: planUtilizationHistoryLoadGateForTesting,
             enabled: self.startupBehavior.automaticallyStartsBackgroundWork)
-        self.sessionLimitResetDetectorStates = Self.loadLimitResetDetectorStates(
+        self.sessionLimitResetDetectorStates = Self.loadPlanUtilizationStates(
             from: settings.userDefaults,
             defaultsKey: Self.sessionLimitResetDetectorDefaultsKey,
             logName: "session")

@@ -883,6 +883,8 @@ struct MenuBarLayoutChipFlowLayout: Layout {
 
 @MainActor
 struct MenuBarLayoutPreview: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     let layout: MenuBarLayout
     let provider: UsageProvider?
     @Bindable var settings: SettingsStore
@@ -897,20 +899,23 @@ struct MenuBarLayoutPreview: View {
             ?? self.representativeData(provider: provider)
         let icon = ProviderBrandIcon.image(for: provider)
         let minute = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970 / 60) * 60)
+        let appearanceName = self.colorScheme == .dark ? "darkAqua" : "aqua"
         let rendered = self.renderer.render(
             layout: self.layout,
             data: data,
             icon: icon,
             options: MenuBarLayoutRenderOptions(
                 size: self.settings.menuBarLayoutSize,
-                highContrast: self.settings.menuBarHighContrastOnInactiveDisplays,
+                highContrast: self.settings.menuBarHighContrastOnInactiveDisplays
+                    || (self.settings.menuBarColorByProvider && self.colorSchemeContrast == .increased),
                 showUsed: self.settings.usageBarsShowUsed,
                 conditionals: self.settings.menuBarLayoutConditionals,
-                appearanceName: "preview",
+                appearanceName: appearanceName,
                 isDebugApp: false,
                 now: minute,
                 verticalAdjustment: self.settings.menuBarLayoutVerticalAdjustment,
-                colorPace: self.settings.menuBarColorPace))
+                colorPace: self.settings.menuBarColorPace,
+                colorByProvider: self.settings.menuBarColorByProvider))
         MenuBarLayoutPreviewText(rendered: rendered)
     }
 

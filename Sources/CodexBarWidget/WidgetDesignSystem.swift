@@ -1,6 +1,63 @@
 import CodexBarCore
+import Foundation
 import SwiftUI
 import WidgetKit
+
+/// Widget catalogs are generated from the app catalogs by sync-widget-locales.mjs.
+enum WidgetLocalization {
+    static let resourceBundle: Bundle = {
+        #if SWIFT_PACKAGE
+        return .module
+        #else
+        return .main
+        #endif
+    }()
+
+    static var currentBundle: Bundle {
+        #if SWIFT_PACKAGE
+        let defaultLanguage = TestProcessSafety.isRunning ? "en" : ""
+        #else
+        let defaultLanguage = ""
+        #endif
+        let language = WidgetLocalizationOverride.language ?? defaultLanguage
+        return self.bundle(language: language)
+    }
+
+    static func bundle(language: String, resourceBundle: Bundle = WidgetLocalization.resourceBundle) -> Bundle {
+        let language = language.isEmpty
+            ? Bundle.preferredLocalizations(from: resourceBundle.localizations).first ?? "en"
+            : language
+        // Native SwiftPM builds lowercase language-directory names, including region and script suffixes.
+        for candidate in [language, language.lowercased()] {
+            if let path = resourceBundle.path(forResource: candidate, ofType: "lproj"),
+               let bundle = Bundle(path: path)
+            {
+                return bundle
+            }
+        }
+        return resourceBundle
+    }
+}
+
+enum WidgetLocalizationOverride {
+    @TaskLocal static var language: String?
+}
+
+func W(_ key: String, _ arguments: CVarArg...) -> String {
+    let bundle = WidgetLocalization.currentBundle
+    var value = bundle.localizedString(forKey: key, value: nil, table: nil)
+    if value.isEmpty || value == key,
+       let path = WidgetLocalization.resourceBundle.path(forResource: "en", ofType: "lproj"),
+       let english = Bundle(path: path)
+    {
+        value = english.localizedString(forKey: key, value: nil, table: nil)
+    }
+    let language = bundle.bundleURL.deletingPathExtension().lastPathComponent
+    let locale = bundle.bundleURL.pathExtension == "lproj"
+        ? Locale(identifier: language == "ar" ? "ar@numbers=arab" : language)
+        : Locale.current
+    return arguments.isEmpty ? value : String(format: value, locale: locale, arguments: arguments)
+}
 
 extension EnvironmentValues {
     /// Mirrors the app's "show used instead of remaining" preference into the tiles.
@@ -174,7 +231,7 @@ enum ProviderTitle {
 enum ProviderMarkLabel {
     static func text(for provider: UsageProvider, isSelected: Bool) -> String {
         let name = ProviderDefaults.metadata[provider]?.displayName ?? provider.rawValue.capitalized
-        return isSelected ? "\(name), selected" : name
+        return isSelected ? W("%@, selected", name) : name
     }
 }
 
@@ -231,7 +288,7 @@ struct QuotaLaneView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
-                Text(self.title)
+                Text(W(self.title))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -447,7 +504,7 @@ struct WidgetEmptyState: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("Open CodexBar")
+            Text(W("Open CodexBar"))
                 .font(.subheadline.weight(.semibold))
             Text(self.message)
                 .font(.caption)

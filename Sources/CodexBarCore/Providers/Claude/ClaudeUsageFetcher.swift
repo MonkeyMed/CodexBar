@@ -25,6 +25,7 @@ public struct ClaudeUsageSnapshot: Sendable {
     public let accountOrganization: String?
     /// Verified principal and organization from the same credential that produced this usage.
     public let accountID: String?
+    public internal(set) var subscriptionMetadata: ClaudeSubscriptionMetadata?
     public let loginMethod: String?
     public let rawText: String?
     /// Present only when the credential used for this OAuth fetch matches the current Claude Keychain item.
@@ -132,6 +133,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         let webExtrasTimeout: TimeInterval
         let includePrepaidBalance: Bool
         let includeAccountIdentity: Bool
+        let includeSubscriptionMetadata: Bool
         let keepCLISessionsAlive: Bool
         let browserDetection: BrowserDetection
     }
@@ -276,6 +278,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
         webExtrasTimeout: TimeInterval = 15,
         includePrepaidBalance: Bool = false,
         includeAccountIdentity: Bool = false,
+        includeSubscriptionMetadata: Bool = false,
         keepCLISessionsAlive: Bool = false)
     {
         self.configuration = Configuration(
@@ -292,6 +295,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
             webExtrasTimeout: webExtrasTimeout,
             includePrepaidBalance: includePrepaidBalance,
             includeAccountIdentity: includeAccountIdentity,
+            includeSubscriptionMetadata: includeSubscriptionMetadata,
             keepCLISessionsAlive: keepCLISessionsAlive,
             browserDetection: browserDetection)
     }
@@ -332,11 +336,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                     oauthKeychainCredentialMismatch: keychainMatch.isMismatch,
                     oauthKeychainCredentialAbsent: keychainMatch.isAbsent,
                     oauthKeychainCredentialUnavailable: keychainMatch.isUnavailable)
-                let identified = try await self.fetcher.appendingAccountIdentity(
-                    to: snapshot, accessToken: credentials.accessToken)
-                return try await self.fetcher.applyWebExtrasIfNeeded(
-                    to: identified,
-                    oauthAccessToken: credentials.accessToken)
+                return try await self.fetcher.enrichingOAuthSnapshot(snapshot, accessToken: credentials.accessToken)
             } catch let error as CancellationError {
                 throw error
             } catch let error where ClaudeOAuthFetchError.isCancellation(error) {
@@ -487,11 +487,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                     oauthKeychainCredentialMismatch: keychainMatch.isMismatch,
                     oauthKeychainCredentialAbsent: keychainMatch.isAbsent,
                     oauthKeychainCredentialUnavailable: keychainMatch.isUnavailable)
-                let identified = try await self.fetcher.appendingAccountIdentity(
-                    to: snapshot, accessToken: refreshedCredentials.accessToken)
-                return try await self.fetcher.applyWebExtrasIfNeeded(
-                    to: identified,
-                    oauthAccessToken: refreshedCredentials.accessToken)
+                return try await self.fetcher.enrichingOAuthSnapshot(
+                    snapshot, accessToken: refreshedCredentials.accessToken)
             } catch let error where ClaudeOAuthFetchError.isCancellation(error) {
                 throw error
             } catch let error as ClaudeOAuthCredentialsError
@@ -678,6 +675,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 }
                 guard Self.shouldTryDirectCLIUsage(after: error) else { throw error }
                 let ptyError = error
+                ClaudeUsageFetcher.log.debug(
+                    "Claude PTY usage failed; trying direct usage",
+                    metadata: ["error": error.localizedDescription])
                 do {
                     snapshot = try await self.fetcher.loadViaDirectCLI(
                         timeout: Self.directCLIUsageTimeout(for: timeout))
@@ -689,7 +689,8 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                         ClaudeCLIRateLimitGate.recordRateLimit()
                         throw directError
                     }
-                    guard Self.directCLIErrorShouldReplacePTYError(directError) else { throw ptyError }
+                    guard ClaudeStatusProbe.isSubscriptionQuotaUnavailableDescription(directError.localizedDescription)
+                    else { throw ptyError }
                     throw directError
                 }
             }
@@ -700,16 +701,6 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
 
         private static func directCLIUsageTimeout(for ptyTimeout: TimeInterval) -> TimeInterval {
             min(max(ptyTimeout / 3, 6), 8)
-        }
-
-        private static func directCLIErrorShouldReplacePTYError(_ error: Error) -> Bool {
-            if case let ClaudeStatusProbeError.parseFailed(message) = error {
-                return message.lowercased().contains("subscription")
-            }
-            if case let ClaudeUsageError.parseFailed(message) = error {
-                return message.lowercased().contains("subscription")
-            }
-            return false
         }
 
         private static func shouldTryDirectCLIUsage(after error: Error) -> Bool {
@@ -927,6 +918,21 @@ extension ClaudeUsageFetcher {
         }
         #endif
         return try await ClaudeOAuthUsageFetcher.fetchProfile(accessToken: accessToken)
+    }
+
+    private func enrichingOAuthSnapshot(
+        _ snapshot: ClaudeUsageSnapshot, accessToken: String) async throws -> ClaudeUsageSnapshot
+    {
+        let identified = try await self.appendingAccountIdentity(to: snapshot, accessToken: accessToken)
+        var enriched = try await self.applyWebExtrasIfNeeded(to: identified, oauthAccessToken: accessToken)
+        if self.configuration.includeSubscriptionMetadata, let cookie = self.manualCookieHeader,
+           case let .available(metadata) = await ClaudeSubscriptionMetadataFetcher.fetch(
+               cookieHeader: cookie, expectedOwnerID: enriched.accountID, oauthAccessToken: accessToken)
+        {
+            enriched.subscriptionMetadata = metadata
+        }
+        try Task.checkCancellation()
+        return enriched
     }
 
     private func appendingAccountIdentity(
