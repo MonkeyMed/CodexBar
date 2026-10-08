@@ -204,13 +204,39 @@ enum TTYProcessTreeTerminator {
 
         var children: Set<pid_t> = []
         for taskID in taskIDs {
-            let childrenPath = "\(taskPath)/\(taskID)/children"
-            guard let text = try? String(contentsOfFile: childrenPath, encoding: .utf8) else { continue }
+            guard let text = self.readProcFile("\(taskPath)/\(taskID)/children") else { continue }
             children.formUnion(text.split(whereSeparator: \.isWhitespace).compactMap { pid_t($0) })
         }
         return children.sorted()
         #endif
     }
+
+    #if !canImport(Darwin)
+    /// Reads a procfs file with plain `read(2)`.
+    ///
+    /// Most `/proc/<pid>/task/<tid>/children` files are empty, and Foundation's file readers leak their 4 KB
+    /// read buffer for every empty file on Linux. A long-running `codexbar serve` walks dozens of them per
+    /// child teardown, which grew its heap by megabytes per hour.
+    static func readProcFile(_ path: String) -> String? {
+        let descriptor = open(path, O_RDONLY | O_CLOEXEC)
+        guard descriptor >= 0 else { return nil }
+        defer { close(descriptor) }
+
+        var bytes: [UInt8] = []
+        var chunk = [UInt8](repeating: 0, count: 4096)
+        while true {
+            let count = chunk.withUnsafeMutableBytes { read(descriptor, $0.baseAddress, $0.count) }
+            if count > 0 {
+                bytes.append(contentsOf: chunk[..<count])
+            } else if count == 0 {
+                break
+            } else if errno != EINTR {
+                return nil
+            }
+        }
+        return String(bytes: bytes, encoding: .utf8)
+    }
+    #endif
 
     static func processIdentity(for pid: pid_t) -> ProcessIdentity? {
         guard pid > 0 else { return nil }
