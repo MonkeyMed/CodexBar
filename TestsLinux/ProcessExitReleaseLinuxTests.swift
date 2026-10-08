@@ -11,6 +11,23 @@ struct ProcessExitReleaseLinuxTests {
     }
 
     @Test
+    func `serve returns output pipes after repeated RPC refreshes`() async throws {
+        let binary = URL(fileURLWithPath: CommandLine.arguments[0])
+            .deletingLastPathComponent().appendingPathComponent("CodexBarCLI")
+        let script = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Scripts/test_linux_serve_rpc_pipes.py")
+        let result = try await SubprocessRunner.run(
+            binary: "/usr/bin/python3",
+            arguments: [script.path, binary.path],
+            environment: ["PATH": "/usr/bin:/bin"],
+            timeout: 300,
+            reapDescendants: true,
+            label: "serve-rpc-pipe-fixture")
+        #expect(result.stdout.contains("\"retained_pipe_growth\": 0"))
+    }
+
+    @Test
     func `RPC child teardown releases the process and its output pipes`() async throws {
         let child = try Self.launch(executable: "/bin/cat", arguments: []) { process, stdin in
             RPCChildProcessTeardown.terminate(process: process, stdin: stdin)
