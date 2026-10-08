@@ -119,92 +119,35 @@ struct CodexAccountPromotionPreparationTests {
 
     @Test
     func `runtime account preserves historical email precedence`() throws {
-        for candidate in Self.emailPrecedenceCases {
+        let cases: [(name: String, topLevel: Any?, profile: Any?, expectedEmail: String?)] = [
+            ("top-level email only", " Top@Example.COM ", nil, "top@example.com"),
+            ("profile email only", nil, " Profile@Example.COM ", "profile@example.com"),
+            ("matching claims", " Match@Example.COM ", "match@example.com", "match@example.com"),
+            (
+                "conflicting claims preserve top-level precedence",
+                "top@example.com", "profile@example.com", "top@example.com"),
+            ("malformed top-level claim falls back to profile", 42, "profile@example.com", "profile@example.com"),
+            ("malformed profile claim does not override valid top-level", "top@example.com", 42, "top@example.com"),
+            ("missing top-level claim uses profile", nil, "profile@example.com", "profile@example.com"),
+            ("missing profile claim preserves top-level", "top@example.com", nil, "top@example.com"),
+            ("missing claims", nil, nil, nil),
+            (
+                "case and whitespace normalize after top-level selection",
+                " Top@Example.COM ", " top@example.com ", "top@example.com"),
+        ]
+        for candidate in cases {
             var payload: [String: Any] = [:]
-            if let topLevel = candidate.topLevel.value {
+            if let topLevel = candidate.topLevel {
                 payload["email"] = topLevel
             }
-            if let profile = candidate.profile.value {
+            if let profile = candidate.profile {
                 payload["https://api.openai.com/profile"] = ["email": profile]
             }
-            let rawData = try Self.authData(idToken: Self.jwt(payload: payload))
+            let rawData = try JSONSerialization.data(
+                withJSONObject: ["tokens": ["id_token": Self.jwt(payload: payload)]])
             let account = try PreparedPromotionContextBuilder.runtimeAccount(from: rawData)
             #expect(account.email == candidate.expectedEmail, "Scenario: \(candidate.name)")
         }
-    }
-
-    private static let emailPrecedenceCases: [PromotionEmailCase] = [
-        .init(
-            name: "top-level email only",
-            topLevel: .string(" Top@Example.COM "),
-            profile: .absent,
-            expectedEmail: "top@example.com"),
-        .init(
-            name: "profile email only",
-            topLevel: .absent,
-            profile: .string(" Profile@Example.COM "),
-            expectedEmail: "profile@example.com"),
-        .init(
-            name: "matching claims",
-            topLevel: .string(" Match@Example.COM "),
-            profile: .string("match@example.com"),
-            expectedEmail: "match@example.com"),
-        .init(
-            name: "conflicting claims preserve top-level precedence",
-            topLevel: .string("top@example.com"),
-            profile: .string("profile@example.com"),
-            expectedEmail: "top@example.com"),
-        .init(
-            name: "malformed top-level claim falls back to profile",
-            topLevel: .number,
-            profile: .string("profile@example.com"),
-            expectedEmail: "profile@example.com"),
-        .init(
-            name: "malformed profile claim does not override valid top-level",
-            topLevel: .string("top@example.com"),
-            profile: .number,
-            expectedEmail: "top@example.com"),
-        .init(
-            name: "missing top-level claim uses profile",
-            topLevel: .absent,
-            profile: .string("profile@example.com"),
-            expectedEmail: "profile@example.com"),
-        .init(
-            name: "missing profile claim preserves top-level",
-            topLevel: .string("top@example.com"),
-            profile: .absent,
-            expectedEmail: "top@example.com"),
-        .init(name: "missing claims", topLevel: .absent, profile: .absent, expectedEmail: nil),
-        .init(
-            name: "case and whitespace normalize after top-level selection",
-            topLevel: .string(" Top@Example.COM "),
-            profile: .string(" top@example.com "),
-            expectedEmail: "top@example.com"),
-    ]
-
-    private struct PromotionEmailCase {
-        let name: String
-        let topLevel: Claim
-        let profile: Claim
-        let expectedEmail: String?
-    }
-
-    private enum Claim {
-        case absent
-        case string(String)
-        case number
-
-        var value: Any? {
-            switch self {
-            case .absent: nil
-            case let .string(value): value
-            case .number: 42
-            }
-        }
-    }
-
-    private static func authData(idToken: String) throws -> Data {
-        try JSONSerialization.data(withJSONObject: ["tokens": ["id_token": idToken]])
     }
 
     private static func jwt(payload: [String: Any]) throws -> String {

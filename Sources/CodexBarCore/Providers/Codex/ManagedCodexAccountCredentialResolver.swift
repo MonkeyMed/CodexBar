@@ -4,17 +4,19 @@ import Foundation
 ///
 /// This type does not promise secure memory or zeroization. It prevents accidental serialization,
 /// reflection, diagnostics, and equality-based handling of the bearer value at this boundary.
-public struct EphemeralAccessCredential: Sendable, CustomStringConvertible, CustomDebugStringConvertible,
+public struct ManagedCodexAccessCredential: Sendable, CustomStringConvertible, CustomDebugStringConvertible,
     CustomReflectable
 {
     private let accessToken: String
+    public let expiresAt: Date
 
-    init(accessToken: String) {
+    init(accessToken: String, expiresAt: Date) {
         self.accessToken = accessToken
+        self.expiresAt = expiresAt
     }
 
     public var description: String {
-        "EphemeralAccessCredential(redacted)"
+        "ManagedCodexAccessCredential(redacted, expiresAt: \(self.expiresAt))"
     }
 
     public var debugDescription: String {
@@ -28,25 +30,6 @@ public struct EphemeralAccessCredential: Sendable, CustomStringConvertible, Cust
     /// Limit the bearer value's exposure to the immediate caller that must construct an authorized request.
     public func withAccessToken<Result>(_ body: (String) throws -> Result) rethrows -> Result {
         try body(self.accessToken)
-    }
-}
-
-public struct ManagedCodexAccessCredential: Sendable, CustomStringConvertible, CustomDebugStringConvertible,
-    CustomReflectable
-{
-    public let access: EphemeralAccessCredential
-    public let expiresAt: Date
-
-    public var description: String {
-        "ManagedCodexAccessCredential(redacted, expiresAt: \(self.expiresAt))"
-    }
-
-    public var debugDescription: String {
-        self.description
-    }
-
-    public var customMirror: Mirror {
-        Mirror(self, children: [(label: String?, value: Any)]())
     }
 }
 
@@ -69,16 +52,21 @@ struct NativeCodexAccessSnapshot: Sendable, CustomStringConvertible, CustomDebug
     }
 
     static func read(home: URL) throws -> Self {
-        let credentials = try CodexOAuthCredentialsStore.load(env: ["CODEX_HOME": home.path])
-        guard credentials.source == .codexHome, !credentials.isAPIKey else {
-            throw NativeCodexAccessSnapshotError.unsupportedCredential
+        guard let data = try DefaultCodexAuthMaterialReader().readAuthData(homeURL: home) else {
+            throw CodexOAuthCredentialsError.notFound
         }
+        let credentials = try CodexOAuthCredentialsStore.parse(data: data)
+        guard !credentials.isAPIKey else { throw NativeCodexAccessSnapshotError.unsupportedCredential }
+        // Promotion's native-default extraction excludes the usage reader's organizations-membership fallback.
+        let account = try PreparedPromotionContextBuilder.runtimeAccount(from: data)
+        let defaultAccountID: String? = if case let .providerAccount(id) = account.identity {
+            id
+        } else { nil }
         return Self(
             accessToken: credentials.accessToken,
             expiresAt: credentials.expiresAt,
-            nativeDefaultAccountID: credentials.accountId,
-            nativeOwnerEmail: CodexNativeCredentialOwnerIdentity.normalizedEmail(
-                fromIDToken: credentials.idToken))
+            nativeDefaultAccountID: defaultAccountID,
+            nativeOwnerEmail: CodexNativeCredentialOwnerIdentity.normalizedEmail(fromIDToken: credentials.idToken))
     }
 }
 
@@ -110,8 +98,6 @@ public enum ManagedCodexCredentialResolution: Sendable {
     case ready(ManagedCodexAccessCredential)
     case renewalRequired(ManagedCodexCredentialRenewalReason)
     case temporarilyUnavailable(ManagedCodexCredentialTemporaryReason)
-    /// Reserved for a future caller-directed reauthentication flow; the fresh-only resolver does not emit this state.
-    case reauthRequired
     case accountNotFound
     case unsupported(ManagedCodexCredentialUnsupportedReason)
 }
@@ -182,7 +168,8 @@ public struct ManagedCodexAccountCredentialResolver: Sendable {
         guard let home = self.trustedHome(for: first) else {
             return .unsupported(.untrustedManagedHome)
         }
-        guard self.isUsableAuthFile(at: home.appendingPathComponent("auth.json", isDirectory: false)) else {
+        let authFile = home.appendingPathComponent("auth.json", isDirectory: false)
+        guard self.hasFileType(authFile, .typeRegular) else {
             return .temporarilyUnavailable(.credentialUnavailable)
         }
 
@@ -191,27 +178,35 @@ public struct ManagedCodexAccountCredentialResolver: Sendable {
             snapshot = try self.snapshotReader(home)
         } catch is NativeCodexAccessSnapshotError {
             return .unsupported(.unsupportedCredentialSource)
-        } catch let error as CodexOAuthCredentialsError {
-            switch error {
-            case .notFound, .unreadable, .decodeFailed, .missingTokens:
-                return .temporarilyUnavailable(.credentialUnreadable)
-            case .nativeRefreshRequired, .readOnlySource:
-                return .unsupported(.unsupportedCredentialSource)
-            }
         } catch {
             return .temporarilyUnavailable(.credentialUnreadable)
         }
-
         guard !snapshot.accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return .temporarilyUnavailable(.credentialUnreadable)
         }
-        guard self.isOwnerCompatible(account: first, snapshot: snapshot) else {
+        guard let owner = CodexIdentityResolver.normalizeEmail(first.email), owner == snapshot.nativeOwnerEmail else {
             return .unsupported(.bindingEvidenceInsufficient)
         }
-        guard self.isWorkspaceCompatible(account: first, snapshot: snapshot) else {
+        let nativeDefault = ManagedCodexAccount.normalizeWorkspaceAccountID(snapshot.nativeDefaultAccountID)
+        guard nativeDefault != nil,
+              first.effectiveWorkspaceAccountID == nil || first.effectiveWorkspaceAccountID == nativeDefault
+        else {
             return first.effectiveWorkspaceAccountID == nil
                 ? .unsupported(.bindingEvidenceInsufficient)
                 : .unsupported(.workspaceScope)
+        }
+
+        do {
+            guard let second = try self.store.loadAccountMetadata().account(id: accountID),
+                  first.email == second.email,
+                  first.effectiveWorkspaceAccountID == second.effectiveWorkspaceAccountID,
+                  self.trustedHome(for: second) == home,
+                  self.hasFileType(authFile, .typeRegular)
+            else {
+                return .temporarilyUnavailable(.accountChanged)
+            }
+        } catch {
+            return .temporarilyUnavailable(.accountChanged)
         }
         guard let expiry = snapshot.expiresAt else {
             return .renewalRequired(.expiryUnknown)
@@ -223,126 +218,43 @@ public struct ManagedCodexAccountCredentialResolver: Sendable {
         guard remaining > requiredLifetime else {
             return .renewalRequired(.insufficientLifetime)
         }
-
-        do {
-            guard let second = try self.store.loadAccountMetadata().account(id: accountID) else {
-                return .temporarilyUnavailable(.accountChanged)
-            }
-            guard self.observationIdentity(of: first) == self.observationIdentity(of: second) else {
-                return .temporarilyUnavailable(.accountChanged)
-            }
-        } catch {
-            return .temporarilyUnavailable(.accountChanged)
-        }
-
-        return .ready(ManagedCodexAccessCredential(
-            access: EphemeralAccessCredential(accessToken: snapshot.accessToken),
-            expiresAt: expiry))
+        return .ready(ManagedCodexAccessCredential(accessToken: snapshot.accessToken, expiresAt: expiry))
     }
 
     private func requiredLifetime(_ callerMinimum: TimeInterval) -> TimeInterval? {
-        guard callerMinimum.isFinite, callerMinimum >= 0,
-              callerMinimum <= ManagedCodexCredentialResolverPolicy.maximumMinimumValidity,
+        let maximum = ManagedCodexCredentialResolverPolicy.maximumMinimumValidity
+        guard callerMinimum.isFinite, (0...maximum).contains(callerMinimum),
               self.policy.authorityMinimumValidity.isFinite,
-              self.policy.authorityMinimumValidity >= 0,
-              self.policy.authorityMinimumValidity
-              <= ManagedCodexCredentialResolverPolicy.maximumMinimumValidity,
+              (0...maximum).contains(self.policy.authorityMinimumValidity),
               self.policy.clockSkew.isFinite, self.policy.clockSkew >= 0
-        else {
-            return nil
-        }
+        else { return nil }
         let minimum = max(callerMinimum, self.policy.authorityMinimumValidity)
-        guard minimum <= TimeInterval.greatestFiniteMagnitude - self.policy.clockSkew else {
-            return nil
-        }
+        guard minimum <= TimeInterval.greatestFiniteMagnitude - self.policy.clockSkew else { return nil }
         return minimum + self.policy.clockSkew
     }
 
-    private func isOwnerCompatible(account: ManagedCodexAccount, snapshot: NativeCodexAccessSnapshot) -> Bool {
-        guard let selected = CodexIdentityResolver.normalizeEmail(account.email),
-              let native = snapshot.nativeOwnerEmail
-        else { return false }
-        return selected == native
-    }
-
-    private func isWorkspaceCompatible(account: ManagedCodexAccount, snapshot: NativeCodexAccessSnapshot) -> Bool {
-        guard let native = Self.normalizeAccountID(snapshot.nativeDefaultAccountID) else { return false }
-        guard let selected = account.effectiveWorkspaceAccountID else { return true }
-        return selected == native
-    }
-
     private func trustedHome(for account: ManagedCodexAccount) -> URL? {
-        let lexicalRoot = self.managedHomeRoot.standardizedFileURL
-        let lexicalHome = URL(fileURLWithPath: account.managedHomePath, isDirectory: true).standardizedFileURL
-        guard Self.isDescendant(lexicalHome, of: lexicalRoot) else { return nil }
-
-        let canonicalRoot = lexicalRoot.resolvingSymlinksInPath().standardizedFileURL
-        let canonicalHome = lexicalHome.resolvingSymlinksInPath().standardizedFileURL
-        guard Self.isDescendant(canonicalHome, of: canonicalRoot),
-              self.isDirectory(canonicalRoot), self.isDirectory(canonicalHome),
-              self.hasNoSymlinkComponents(from: lexicalRoot, to: lexicalHome)
-        else {
-            return nil
+        let root = self.managedHomeRoot.standardizedFileURL
+        let home = URL(fileURLWithPath: account.managedHomePath, isDirectory: true).standardizedFileURL
+        guard home.pathComponents.count > root.pathComponents.count,
+              home.pathComponents.starts(with: root.pathComponents)
+        else { return nil }
+        let canonicalRoot = root.resolvingSymlinksInPath().standardizedFileURL
+        let canonicalHome = home.resolvingSymlinksInPath().standardizedFileURL
+        guard canonicalHome.pathComponents.count > canonicalRoot.pathComponents.count,
+              canonicalHome.pathComponents.starts(with: canonicalRoot.pathComponents),
+              self.hasFileType(canonicalRoot, .typeDirectory)
+        else { return nil }
+        var component = root
+        for name in home.pathComponents.dropFirst(root.pathComponents.count) {
+            component.appendPathComponent(name, isDirectory: true)
+            guard self.hasFileType(component, .typeDirectory) else { return nil }
         }
         return canonicalHome
     }
 
-    private func isUsableAuthFile(at url: URL) -> Bool {
-        guard (try? FileManager.default.destinationOfSymbolicLink(atPath: url.path)) == nil,
-              let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
-              attributes[.type] as? FileAttributeType == .typeRegular
-        else {
-            return false
-        }
-        return true
-    }
-
-    private func isDirectory(_ url: URL) -> Bool {
+    private func hasFileType(_ url: URL, _ type: FileAttributeType) -> Bool {
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path) else { return false }
-        return attributes[.type] as? FileAttributeType == .typeDirectory
-    }
-
-    private func hasNoSymlinkComponents(from root: URL, to home: URL) -> Bool {
-        let rootComponents = root.pathComponents
-        let homeComponents = home.pathComponents
-        guard homeComponents.starts(with: rootComponents) else { return false }
-        var component = root
-        for name in homeComponents.dropFirst(rootComponents.count) {
-            component.appendPathComponent(name, isDirectory: true)
-            guard (try? FileManager.default.destinationOfSymbolicLink(atPath: component.path)) == nil,
-                  let attributes = try? FileManager.default.attributesOfItem(atPath: component.path),
-                  attributes[.type] as? FileAttributeType != .typeSymbolicLink
-            else {
-                return false
-            }
-        }
-        return true
-    }
-
-    private func observationIdentity(of account: ManagedCodexAccount) -> ObservationIdentity {
-        ObservationIdentity(
-            accountID: account.id,
-            email: account.email,
-            workspaceAccountID: account.effectiveWorkspaceAccountID,
-            canonicalHomePath: URL(fileURLWithPath: account.managedHomePath, isDirectory: true)
-                .resolvingSymlinksInPath()
-                .standardizedFileURL.path)
-    }
-
-    private static func isDescendant(_ candidate: URL, of parent: URL) -> Bool {
-        let parentComponents = parent.pathComponents
-        let candidateComponents = candidate.pathComponents
-        return candidateComponents.count > parentComponents.count && candidateComponents.starts(with: parentComponents)
-    }
-
-    private static func normalizeAccountID(_ value: String?) -> String? {
-        ManagedCodexAccount.normalizeWorkspaceAccountID(value)
-    }
-
-    private struct ObservationIdentity: Equatable {
-        let accountID: UUID
-        let email: String
-        let workspaceAccountID: String?
-        let canonicalHomePath: String
+        return attributes[.type] as? FileAttributeType == type
     }
 }

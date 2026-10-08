@@ -57,13 +57,11 @@ struct ManagedCodexFreshCredentialResolverTests {
             return
         }
         #expect(credential.expiresAt == fixture.now.addingTimeInterval(3600))
-        if !credential.access.withAccessToken({ $0 == canary }) {
+        if !credential.withAccessToken({ $0 == canary }) {
             Issue.record("Expected access projection to preserve the synthetic value")
         }
         #expect(!String(describing: credential).contains(canary))
         #expect(!String(reflecting: credential).contains(canary))
-        #expect(!String(describing: credential.access).contains(canary))
-        #expect(!String(reflecting: credential.access).contains(canary))
     }
 
     @Test
@@ -407,7 +405,7 @@ struct ManagedCodexFreshCredentialResolverTests {
             Issue.record("Expected isolated native OAuth fixture to resolve")
             return
         }
-        #expect(credential.access.withAccessToken { $0 } == access)
+        #expect(credential.withAccessToken { $0 } == access)
 
         try JSONSerialization.data(withJSONObject: ["OPENAI_API_KEY": "synthetic-api-key"])
             .write(to: fixture.authURL)
@@ -450,7 +448,7 @@ struct ManagedCodexFreshCredentialResolverTests {
             Issue.record("Matching synthetic owner should resolve through the production reader")
             return
         }
-        #expect(credential.access.withAccessToken { $0 == access })
+        #expect(credential.withAccessToken { $0 == access })
         #expect(try Data(contentsOf: fixture.authURL) == authBefore)
         #expect(try Data(contentsOf: registryURL) == registryBefore)
         #expect(try FileManager.default.attributesOfItem(atPath: fixture.authURL.path)[.modificationDate] as? Date
@@ -459,13 +457,15 @@ struct ManagedCodexFreshCredentialResolverTests {
             == registryAttributesBefore[.modificationDate] as? Date)
     }
 
-    @Test
-    func `production reader rejects another login in the selected shared workspace`() throws {
-        let fixture = try Self.fixture()
+    @Test(arguments: [false, true])
+    func `production reader rejects another login for scoped and legacy managed accounts`(
+        hasWorkspaceSelection: Bool) throws
+    {
+        let fixture = try Self.fixture(workspaceAccountID: hasWorkspaceSelection ? "acct-default" : nil)
         let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
         try Self.authData(
             access: access,
-            accountID: fixture.account.effectiveWorkspaceAccountID,
+            accountID: hasWorkspaceSelection ? "acct-default" : "acct-native-default",
             ownerEmail: "other-login@example.com")
             .write(to: fixture.authURL)
         let resolver = ManagedCodexAccountCredentialResolver(
@@ -475,26 +475,9 @@ struct ManagedCodexFreshCredentialResolverTests {
 
         let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
 
-        Self.expectBindingEvidenceFailure(resolution, scenario: "shared workspace wrong login")
-    }
-
-    @Test
-    func `production reader rejects another login for a legacy unscoped account`() throws {
-        let fixture = try Self.fixture(workspaceAccountID: nil)
-        let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
-        try Self.authData(
-            access: access,
-            accountID: "acct-native-default",
-            ownerEmail: "other-login@example.com")
-            .write(to: fixture.authURL)
-        let resolver = ManagedCodexAccountCredentialResolver(
-            store: fixture.store,
-            managedHomeRoot: fixture.root,
-            now: { fixture.now })
-
-        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
-
-        Self.expectBindingEvidenceFailure(resolution, scenario: "legacy unscoped wrong login")
+        Self.expectBindingEvidenceFailure(
+            resolution,
+            scenario: hasWorkspaceSelection ? "shared workspace wrong login" : "legacy unscoped wrong login")
     }
 
     @Test
@@ -605,6 +588,47 @@ struct ManagedCodexFreshCredentialResolverTests {
         let replacement = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
 
         Self.expectBindingEvidenceFailure(replacement, scenario: "credential replacement")
+    }
+
+    @Test
+    func `production reader does not mistake workspace membership for the native default`() throws {
+        let fixture = try Self.fixture(workspaceAccountID: nil)
+        let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
+        try Self.authData(
+            access: access,
+            accountID: nil,
+            rawIDToken: Self.jwt(payload: [
+                "email": fixture.account.email,
+                "organizations": [["id": "acct-membership-only"]],
+            ]))
+            .write(to: fixture.authURL)
+        let resolver = ManagedCodexAccountCredentialResolver(
+            store: fixture.store,
+            managedHomeRoot: fixture.root,
+            now: { fixture.now })
+
+        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        Self.expectBindingEvidenceFailure(resolution, scenario: "membership without a native default")
+    }
+
+    @Test
+    func `resolver rejects a home replaced with a symlink during credential observation`() throws {
+        let fixture = try Self.fixture()
+        let displacedHome = fixture.root.appendingPathComponent("displaced-\(UUID().uuidString)", isDirectory: true)
+        let resolver = Self.resolver(fixture: fixture) { home in
+            try FileManager.default.moveItem(at: home, to: displacedHome)
+            try FileManager.default.createSymbolicLink(at: home, withDestinationURL: displacedHome)
+            return Self.snapshot(fixture)
+        }
+
+        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        guard case let .temporarilyUnavailable(reason) = resolution else {
+            Issue.record("A home replaced after validation must not release the observed credential")
+            return
+        }
+        #expect(reason == .accountChanged)
     }
 
     private static func expectBindingEvidenceFailure(
