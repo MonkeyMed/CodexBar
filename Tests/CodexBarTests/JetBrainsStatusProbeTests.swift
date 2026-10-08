@@ -460,25 +460,6 @@ struct JetBrainsStatusProbeTests {
         #expect(usage.detailRow(label: "Remaining")?.value == "54.90 credits")
     }
 
-    @Test
-    func `top-up credits become a balance detail instead of a usage window`() throws {
-        let quotaInfo = JetBrainsQuotaInfo(
-            type: "Available",
-            used: 353_265.849,
-            maximum: 1_000_000,
-            available: 646_734.151,
-            until: nil,
-            topUp: JetBrainsTopUpQuota(maximum: 6_000_000, available: 5_489_986.397))
-        let snapshot = JetBrainsStatusSnapshot(quotaInfo: quotaInfo, refillInfo: nil, detectedIDE: nil)
-
-        let usage = try snapshot.toUsageSnapshot()
-
-        #expect(abs((usage.primary?.usedPercent ?? 0) - 35.3265849) < 0.0001)
-        #expect(usage.secondary == nil)
-        #expect(usage.details.map(\.title) == ["Top-up credits"])
-        #expect(usage.detailRow(label: "Remaining")?.value == "54.90 credits")
-    }
-
     @Test(arguments: [
         [String: String](),
         ["current": "0", "maximum": "0", "available": "0"],
