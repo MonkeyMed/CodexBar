@@ -322,20 +322,11 @@ extension UsageStore {
             currentProjection.visibleAccounts.first { $0.id == id }
         }
         let currentSelectionSource = currentActiveAccount?.selectionSource
-        if currentProjection.activeVisibleAccountID == originalVisibleAccountID,
-           currentSelectionSource == originalSelectionSource
-        {
-            guard let originalAccount else { return true }
-            guard let currentActiveAccount else { return false }
-            return Self.codexVisibleAccountMatchesCurrentProjection(
-                originalAccount,
-                account: currentActiveAccount)
+        guard currentSelectionSource == originalSelectionSource else { return false }
+        guard let originalAccount else {
+            return currentProjection.activeVisibleAccountID == originalVisibleAccountID
         }
-        guard let originalAccount, let currentActiveAccount,
-              currentSelectionSource == originalSelectionSource
-        else {
-            return false
-        }
+        guard let currentActiveAccount else { return false }
         return Self.codexVisibleAccountMatchesCurrentProjection(
             originalAccount, account: currentActiveAccount)
     }

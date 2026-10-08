@@ -172,6 +172,7 @@ extension CodexAccountScopedRefreshTests {
             #expect(failure.account.authFingerprint != sibling.authFingerprint)
             var overview = try #require(store.codexAccountUsageOverview(onRefresh: { _ in }))
             var row = try #require(overview.rows.first { $0.id == sibling.id })
+            try self.writeRotatedAuthOverviewProof(overview, phase: "failed-refresh")
             #expect(row.error == CodexUIErrorMapper.userFacingMessage(failure.error))
             #expect(row.model.metrics.isEmpty)
             #expect(overview.rows.first { $0.id == accounts[0].id }?.error == nil)
@@ -182,6 +183,7 @@ extension CodexAccountScopedRefreshTests {
             store.settings.invalidateCodexAccountReconciliationSnapshotCache()
             overview = try #require(store.codexAccountUsageOverview(onRefresh: { _ in }))
             row = try #require(overview.rows.first { $0.id == sibling.id })
+            try self.writeRotatedAuthOverviewProof(overview, phase: "rotated-again")
             #expect(row.error == nil)
             #expect(row.model.metrics.isEmpty)
         }
