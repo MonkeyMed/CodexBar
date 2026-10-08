@@ -2469,11 +2469,11 @@ struct ProviderArchitectureGatekeeperTests {
             reason: "This exact app-runtime bridge coordinates provider-owned state through the shared controller."),
         AllowedProviderConstruct(
             path: "Sources/CodexBar/StatusItemController+Animation.swift",
-            anchor: "guard isLoading, style == .warp, let phase else {",
+            anchor: "guard style == .warp, let phase else { return self.blinkAmount(for: provider) }",
             expectedProviderIDs: ["warp"],
             expectedReferenceCount: 1,
             expectedReferenceFingerprint: ["warp@0"],
-            reason: "This exact app-runtime bridge coordinates provider-owned state through the shared controller."),
+            reason: "Warp's loading icon animates its eye blink from the loading phase; other styles keep their ordinary blink state."),
         AllowedProviderConstruct(
             path: "Sources/CodexBar/StatusItemController+Animation.swift",
             anchor: "if provider == .kiro {",
@@ -2797,10 +2797,10 @@ struct ProviderArchitectureGatekeeperTests {
                 "codex@0",
                 "codex@1",
                 "codex@10",
-                "codex@13",
-                "kilo@17",
-                "kilo@23",
-                "claude@27",
+                "codex@15",
+                "kilo@19",
+                "kilo@25",
+                "claude@29",
             ],
             reason: "This exact app-runtime bridge coordinates provider-owned state through the shared controller."),
         AllowedProviderConstruct(

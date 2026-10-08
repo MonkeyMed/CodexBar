@@ -1824,7 +1824,7 @@ struct MenuBarLayoutRendererTests {
         MenuBarLayoutRenderData(
             provider: provider,
             iconKey: "codex",
-            providerName: "Codex",
+            providerName: ProviderDescriptorRegistry.descriptor(for: provider).metadata.displayName,
             accountLabel: accountLabel,
             laneLabels: laneLabels ?? MenuBarLayoutLaneLabels(provider: provider, snapshot: nil),
             primary: MenuBarLayoutRenderWindow(RateWindow(
@@ -1893,8 +1893,10 @@ struct MenuBarLayoutRendererTests {
         conditionals: [MenuBarLayoutConditional] = [],
         isDebugApp: Bool = false,
         colorPace: Bool = false,
+        colorByProvider: Bool = false,
         highContrast: Bool = false,
         appearanceName: String = "aqua",
+        isHighlighted: Bool = false,
         forceStackedStyle: Bool = false) -> MenuBarLayoutRenderOptions
     {
         MenuBarLayoutRenderOptions(
@@ -1905,9 +1907,11 @@ struct MenuBarLayoutRendererTests {
             appearanceName: appearanceName,
             isDebugApp: isDebugApp,
             isStale: isStale,
+            isHighlighted: isHighlighted,
             now: now ?? self.now,
             verticalAdjustment: verticalAdjustment,
             colorPace: colorPace,
+            colorByProvider: colorByProvider,
             forceStackedStyle: forceStackedStyle)
     }
 

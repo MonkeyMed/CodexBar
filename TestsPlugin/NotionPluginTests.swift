@@ -9,6 +9,98 @@ struct NotionPluginTests {
     private static let now = Date(timeIntervalSince1970: 1_785_600_000)
     private static let spaces = #"{"user":{"notion_user":{"user":{"value":{"value":{"id":"user","email":"fixture@example.test"}}}},"space":{"free":{"value":{"id":"00000000-0000-0000-0000-000000000000","name":"Personal","subscription_tier":"free"}},"paid":{"value":{"id":"11111111-2222-3333-4444-555555555555","name":"Fixture team","subscription_tier":"business"}}}}}"#
 
+    private static func oversizedSpaces() throws -> String {
+        var spaces = try #require(JSONSerialization.jsonObject(with: Data(Self.spaces.utf8)) as? [String: Any])
+        var user = try #require(spaces["user"] as? [String: Any])
+        user["space_user"] = Dictionary(uniqueKeysWithValues: (0..<6000).map { index in
+            ("member-\(index)", ["value": ["id": "member-\(index)", "name": String(repeating: "x", count: 1024)]])
+        })
+        spaces["user"] = user
+        let data = try JSONSerialization.data(withJSONObject: spaces)
+        #expect(data.count > ProviderPluginRuntime.maximumResponseBytes)
+        return try #require(String(data: data, encoding: .utf8))
+    }
+
+    @Test(arguments: BundledPluginTestSupport.engines)
+    func `oversized discovery recovers allowances for a configured workspace`(
+        engine: ProviderPluginEngineKind) async throws
+    {
+        let spaces = try Self.oversizedSpaces()
+        for preferred in ["11111111-2222-3333-4444-555555555555", " 11111111222233334444555555555555 "] {
+            let calls = Calls()
+            let validated = Calls()
+            let runtime = try Self.runtime(
+                engine: engine,
+                usage: #"{"window":{"window":"6h","used":25,"limit":100},"resetsInSeconds":3600,"billingPeriodWindow":{"used":18,"limit":100,"periodEndMs":1788000000000}}"#,
+                spaces: spaces,
+                calls: calls)
+            let usage = try await runtime.fetchUsage(
+                settings: ["WORKSPACE_ID": preferred],
+                now: Self.now,
+                cookieSessionResolver: Self.session,
+                cookieSessionValidator: { _, id in validated.append(id) })
+            #expect(calls.values == ["getSpaces", "getCreditRateLimitStatus"])
+            #expect(validated.values == ["synthetic-session"])
+            #expect(usage.primary?.usedPercent == 25)
+            #expect(usage.primary?.resetsAt == Self.now.addingTimeInterval(3600))
+            #expect(usage.secondary?.usedPercent == 18)
+            #expect(usage.secondary?.windowMinutes == 43200)
+            #expect(usage.identity?.accountEmail == nil)
+            #expect(usage.identity?.accountID == nil)
+            #expect(usage.identity?.accountOrganization == nil)
+            #expect(usage.identity?.loginMethod == nil)
+        }
+    }
+
+    @Test(arguments: BundledPluginTestSupport.engines)
+    func `oversized discovery without a valid workspace explains the recovery`(
+        engine: ProviderPluginEngineKind) async throws
+    {
+        let spaces = try Self.oversizedSpaces()
+        for preferred in ["", " ", "unknown"] {
+            let calls = Calls()
+            let runtime = try Self.runtime(engine: engine, usage: "{}", spaces: spaces, calls: calls)
+            do {
+                _ = try await runtime.fetchUsage(
+                    settings: ["WORKSPACE_ID": preferred],
+                    cookieSource: .manual,
+                    cookieSessionResolver: Self.session)
+                Issue.record("Oversized discovery requires a valid workspace ID")
+            } catch {
+                #expect(error.localizedDescription.contains("Workspace ID"))
+            }
+            #expect(calls.values == ["getSpaces"])
+        }
+    }
+
+    @Test(arguments: BundledPluginTestSupport.engines)
+    func `workspace recovery preserves errors and the allowance response limit`(
+        engine: ProviderPluginEngineKind) async throws
+    {
+        let oversized = try Self.oversizedSpaces()
+        for (spaces, usage, status, expectedCalls) in [
+            ("not-json", "{}", 200, ["getSpaces"]),
+            ("{}", "{}", 403, ["getSpaces"]),
+            (Self.spaces, oversized, 200, ["getSpaces", "getCreditRateLimitStatus"]),
+            (oversized, "{}", 401, ["getSpaces", "getCreditRateLimitStatus"]),
+            (oversized, #"{"status":"not_applicable"}"#, 200, ["getSpaces", "getCreditRateLimitStatus"]),
+        ] {
+            let calls = Calls()
+            let rejected = Calls()
+            let runtime = try Self.runtime(
+                engine: engine, usage: usage, spaces: spaces, status: status, calls: calls)
+            await #expect(throws: (any Error).self) {
+                try await runtime.fetchUsage(
+                    settings: ["WORKSPACE_ID": "11111111222233334444555555555555"],
+                    cookieSessionResolver: Self.session,
+                    cookieSessionInvalidator: { _, id in rejected.append(id) },
+                    cookieSessionValidator: { _, _ in Issue.record("Failed requests cannot validate a session") })
+            }
+            #expect(calls.values == expectedCalls)
+            #expect(rejected.values == (status == 401 ? ["synthetic-session"] : []))
+        }
+    }
+
     #if os(macOS)
     @Test(arguments: BundledPluginTestSupport.engines)
     func `automatic import reaches Edge after Chrome and maps its Notion session`(
@@ -140,6 +232,11 @@ struct NotionPluginTests {
             "[]",
             "not-json",
             #"{"window":{"used":"25","limit":100}}"#,
+            #"{"window":{"scope":false}}"#,
+            #"{"window":{"periodEndMs":"invalid"}}"#,
+            #"{"billingPeriodWindow":{"cadence":42}}"#,
+            #"{"billingPeriodWindow":{"used":25,"limit":0,"periodEndMs":"invalid"}}"#,
+            #"{"resetsInSeconds":"invalid","billingPeriodWindow":{"used":25,"limit":100}}"#,
             #"{"status":"not_applicable"}"#,
         ] {
             let runtime = try Self.runtime(engine: engine, usage: payload)
@@ -188,13 +285,15 @@ struct NotionPluginTests {
         engine: ProviderPluginEngineKind,
         usage: String,
         spaces: String = Self.spaces,
-        status: Int = 200) throws
+        status: Int = 200,
+        calls: Calls? = nil) throws
         -> ProviderPluginRuntime
     {
         try BundledPluginTestSupport.runtime(
             "notion",
             engine: engine,
             transport: ProviderHTTPTransportHandler { request in
+                calls?.append(request.url?.lastPathComponent ?? "")
                 #expect(request.httpMethod == "POST")
                 #expect(request.url?.host == "app.notion.com")
                 #expect(request.value(forHTTPHeaderField: "Cookie") == "token_v2=synthetic")

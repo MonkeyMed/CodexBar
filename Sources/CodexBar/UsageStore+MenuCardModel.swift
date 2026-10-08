@@ -5,6 +5,7 @@ enum UsageMenuCardContext {
     case menu
     case settings
     case account(Account)
+    case settingsAccount(Account)
 
     struct Account {
         var snapshot: UsageSnapshot?
@@ -21,13 +22,17 @@ enum UsageMenuCardContext {
     }
 
     var account: Account? {
-        guard case let .account(account) = self else { return nil }
-        return account
+        switch self {
+        case let .account(account), let .settingsAccount(account): account
+        case .menu, .settings: nil
+        }
     }
 
     var isSettings: Bool {
-        if case .settings = self { return true }
-        return false
+        switch self {
+        case .settings, .settingsAccount: true
+        case .menu, .account: false
+        }
     }
 }
 
@@ -63,7 +68,7 @@ extension UsageStore {
         let supportsTokenCost = codexProjection != nil || descriptor.tokenCost.supportsTokenCost
         let tokenSnapshot: CostUsageTokenSnapshot?
         if isSettings {
-            tokenSnapshot = supportsTokenCost ? self.tokenSnapshot(for: provider) : nil
+            tokenSnapshot = isLive && supportsTokenCost ? self.tokenSnapshot(for: provider) : nil
         } else {
             let projected = isLive || snapshot != nil
                 ? self.tokenSnapshot(fromProviderSnapshot: snapshot, provider: provider)
@@ -93,7 +98,7 @@ extension UsageStore {
             metadata: metadata,
             snapshot: snapshot,
             codexProjection: codexProjection,
-            credits: codexProjection?.credits?.snapshot,
+            credits: isSettings && !isLive ? account?.credits : codexProjection?.credits?.snapshot,
             creditsError: isSettings ? codexProjection?.credits?.userFacingError : nil,
             dashboardError: isSettings ? codexProjection?.userFacingErrors.dashboard : nil,
             tokenSnapshot: tokenSnapshot,
@@ -111,7 +116,7 @@ extension UsageStore {
                 : self.shouldShowRefreshingMenuCardIndicator(for: provider),
             lastError: account?.error ?? codexProjection?.userFacingErrors.usage
                 ?? (isLive ? self.userFacingError(for: provider) : nil),
-            limitsAvailability: self.knownLimitsAvailability(for: provider),
+            limitsAvailability: isSettings && !isLive ? nil : self.knownLimitsAvailability(for: provider),
             usageBarsShowUsed: self.settings.usageBarsShowUsed,
             resetTimeDisplayStyle: self.settings.resetTimeDisplayStyle,
             tokenCostUsageEnabled: self.settings.isCostUsageEffectivelyEnabled(for: provider),

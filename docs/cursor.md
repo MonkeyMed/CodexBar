@@ -8,6 +8,8 @@ read_when:
 
 # Cursor provider
 
+The opt-in **Frontmost provider app** merged-icon source recognizes Cursor.app (`com.todesktop.230313mzl4w4u92`) when Cursor is enabled. It changes only the collapsed icon, preserving menu and account selection.
+
 Cursor can reuse Cursor.app's local session or a cursor.com browser session. On macOS, automatic mode prefers a usable
 Cursor.app session and falls back to cookies when the app token is missing, expired, invalid, or rejected. On Linux,
 automatic mode uses cached or stored cookies when available, then falls back to the signed-in Cursor app token because

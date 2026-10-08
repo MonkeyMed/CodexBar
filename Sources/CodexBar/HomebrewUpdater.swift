@@ -52,6 +52,11 @@ enum HomebrewUpdateError: LocalizedError, Equatable {
 @MainActor
 @Observable
 final class HomebrewUpdaterController: UpdaterProviding {
+    enum CheckSource {
+        case manual
+        case automatic
+    }
+
     enum Phase: Equatable {
         case idle
         case checking
@@ -84,17 +89,30 @@ final class HomebrewUpdaterController: UpdaterProviding {
     var automaticallyChecksForUpdates: Bool {
         didSet {
             guard oldValue != self.automaticallyChecksForUpdates else { return }
+            if !self.automaticallyChecksForUpdates {
+                self.notifier?.update(availableVersion: nil, notify: false)
+            }
             self.rescheduleChecks()
         }
     }
 
     @ObservationIgnored private let dependencies: Dependencies
+    @ObservationIgnored private let notifier: HomebrewUpdateNotifier?
     @ObservationIgnored private var scheduledChecks: Task<Void, Never>?
     @ObservationIgnored private var activeCheck: Task<Void, Never>?
 
-    init(savedAutoCheck: Bool, dependencies: Dependencies = .live, startScheduledChecks: Bool = true) {
+    init(
+        savedAutoCheck: Bool,
+        dependencies: Dependencies = .live,
+        notifier: HomebrewUpdateNotifier? = nil,
+        startScheduledChecks: Bool = true)
+    {
         self.automaticallyChecksForUpdates = savedAutoCheck
         self.dependencies = dependencies
+        self.notifier = notifier
+        if !savedAutoCheck {
+            self.notifier?.update(availableVersion: nil, notify: false)
+        }
         if startScheduledChecks {
             self.rescheduleChecks()
         }
@@ -106,9 +124,13 @@ final class HomebrewUpdaterController: UpdaterProviding {
     }
 
     func checkForUpdates(_ sender: Any?) {
+        self.startCheck(source: .manual)
+    }
+
+    private func startCheck(source: CheckSource) {
         guard self.activeCheck == nil, self.phase != .installing else { return }
         self.activeCheck = Task { [weak self] in
-            await self?.performCheck()
+            await self?.performCheck(source: source)
             self?.activeCheck = nil
         }
     }
@@ -120,12 +142,13 @@ final class HomebrewUpdaterController: UpdaterProviding {
         }
     }
 
-    func performCheck() async {
-        guard self.phase != .installing, self.phase != .checking else { return }
+    func performCheck(source: CheckSource = .manual) async {
+        guard source == .manual || self.automaticallyChecksForUpdates,
+              self.phase != .installing, self.phase != .checking else { return }
         self.phase = .checking
         do {
-            let source = try await self.dependencies.fetchCaskSource()
-            guard let latest = HomebrewCaskVersion.parse(caskSource: source) else {
+            let caskSource = try await self.dependencies.fetchCaskSource()
+            guard let latest = HomebrewCaskVersion.parse(caskSource: caskSource) else {
                 throw HomebrewUpdateError.invalidCaskResponse
             }
             if HomebrewCaskVersion.isNewer(latest, than: self.dependencies.installedVersion()) {
@@ -135,6 +158,9 @@ final class HomebrewUpdaterController: UpdaterProviding {
                 self.updateStatus.availableVersion = nil
                 self.phase = .upToDate
             }
+            self.notifier?.update(
+                availableVersion: self.updateStatus.availableVersion,
+                notify: source == .automatic && self.automaticallyChecksForUpdates)
         } catch {
             Self.log.warning("Homebrew update check failed", metadata: ["error": error.localizedDescription])
             self.phase = .failed(error.localizedDescription)
@@ -147,6 +173,7 @@ final class HomebrewUpdaterController: UpdaterProviding {
         let startingVersion = self.dependencies.installedVersion()
         self.phase = .installing
         self.updateStatus.isInstalling = true
+        self.notifier?.update(availableVersion: nil, notify: false)
         defer { self.updateStatus.isInstalling = false }
         do {
             try await self.dependencies.runUpgrade()
@@ -171,7 +198,7 @@ final class HomebrewUpdaterController: UpdaterProviding {
         guard self.automaticallyChecksForUpdates else { return }
         self.scheduledChecks = Task { [weak self] in
             while !Task.isCancelled {
-                self?.checkForUpdates(nil)
+                self?.startCheck(source: .automatic)
                 try? await Task.sleep(for: Self.checkInterval)
             }
         }

@@ -102,6 +102,7 @@ Introduce a single descriptor per provider:
 - fetch plan (allowed `--source` modes + ordered strategy pipeline)
 - CLI metadata (cliName, aliases, version provider)
 - account behavior (e.g., `usesAccountFallback` for Codex auth.json)
+- `nativeAppBundleIdentifiers`: exact provider-owned desktop app bundle IDs for the opt-in frontmost merged icon. The shared monitor matches only enabled providers and rejects ambiguous matches; general-purpose browsers and terminals must not claim a provider.
 
 UI and settings should become descriptor-driven:
 - no provider-specific branching for labels/links/toggle titles
