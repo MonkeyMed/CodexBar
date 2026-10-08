@@ -83,6 +83,11 @@ assert_gate true empty
 assert_gate true source-to-docs $'R100\tSources/CodexBar/App.swift\tdocs/App.md'
 assert_gate true docs-to-source $'R100\tdocs/App.md\tSources/CodexBar/App.swift'
 assert_gate false docs-to-site $'R100\tdocs/old.md\tdocs/site.css'
+assert_gate true source-markdown $'M\tSources/CodexBarCore/Resources/prompt.md'
+assert_gate true test-markdown $'M\tTests/Fixtures/README.md'
+assert_gate true widget-markdown $'M\tWidgetExtension/README.md'
+assert_gate true workflow-markdown $'M\t.github/workflows/README.md'
+assert_gate true mixed-docs-source $'M\tREADME.md' $'M\tSources/CodexBar/App.swift'
 assert_gate true tests $'M\tTests/CodexBarTests/ProcessTests.swift'
 assert_gate true package-manifest $'M\tPackage.swift'
 assert_gate true package-resolved $'M\tPackage.resolved'
@@ -152,7 +157,7 @@ if [[ "$(sed -n 's/^macos-tests-deferred=//p' "$draft_output")" != true ]]; then
 fi
 if [[ "$(sed -n 's/^linux-cli-build=//p' "$draft_output")" != true ]] \
   || [[ "$(sed -n 's/^linux-cli-build-reason=//p' "$draft_output")" != \
-    "Sources/CodexBar/App.swift: not covered by portable docs/site checks" ]]
+    "Sources/CodexBar/App.swift: changes source, tests, or workflows" ]]
 then
   printf 'draft source: expected Linux glibc builds to remain required without deferral\n' >&2
   exit 1

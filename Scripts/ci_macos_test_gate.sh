@@ -41,6 +41,9 @@ classify_path() {
   path_count=$((path_count + 1))
 
   case "$path" in
+    Sources/*|Tests/*|WidgetExtension/*|.github/workflows/*)
+      require_macos_tests "$path" "changes source, tests, or workflows"
+      ;;
     AGENTS.md|CLAUDE.md|docs/configuration.md)
       require_macos_tests "$path" "changes contributor or runtime configuration contracts"
       ;;
