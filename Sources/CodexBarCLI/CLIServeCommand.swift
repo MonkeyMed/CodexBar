@@ -30,6 +30,12 @@ struct ServeOptions: CommanderParsable {
     var requestTimeout: Double?
 
     @Option(
+        name: .long("stall-timeout"),
+        help: "Abort after this many seconds without executor progress, for a supervisor to restart; " +
+            "0 disables (default: 0)")
+    var stallTimeout: Double?
+
+    @Option(
         name: .long("dashboard-token"),
         help: "Bearer token for /dashboard/v1/snapshot (prefer CODEXBAR_DASHBOARD_TOKEN)")
     var dashboardBearer: String?
@@ -608,6 +614,7 @@ private enum CLIServeArgumentError: LocalizedError {
     case invalidPort
     case invalidRefreshInterval
     case invalidRequestTimeout
+    case invalidStallTimeout
     case emptyDashboardToken(source: String)
     case invalidProvider(String)
     case invalidDashboardDetail(String)
@@ -622,6 +629,8 @@ private enum CLIServeArgumentError: LocalizedError {
             "--refresh-interval must be zero or greater."
         case .invalidRequestTimeout:
             "--request-timeout must be zero or greater."
+        case .invalidStallTimeout:
+            "--stall-timeout must be zero or greater."
         case let .emptyDashboardToken(source):
             "\(source) must not be empty or whitespace."
         case let .invalidProvider(provider):
@@ -667,6 +676,7 @@ extension CodexBarCLI {
         let host = Self.decodeServeHost(from: values)
         let refreshInterval = Self.decodeServeRefreshInterval(from: values)
         let requestTimeout = Self.decodeServeRequestTimeout(from: values)
+        let stallTimeout = Self.decodeServeStallTimeout(from: values)
         let tokenResolution = Self.resolveDashboardToken(
             from: values,
             environment: ProcessInfo.processInfo.environment)
@@ -699,6 +709,14 @@ extension CodexBarCLI {
             Self.exit(
                 code: .failure,
                 message: CLIServeArgumentError.invalidRequestTimeout.localizedDescription,
+                output: output,
+                kind: .args)
+        }
+
+        guard let stallTimeout else {
+            Self.exit(
+                code: .failure,
+                message: CLIServeArgumentError.invalidStallTimeout.localizedDescription,
                 output: output,
                 kind: .args)
         }
@@ -771,9 +789,9 @@ extension CodexBarCLI {
             server.stop()
         }
         defer { signalMonitor.cancel() }
-        let stallMonitor = CLIServeStallMonitor()
-        stallMonitor.start()
-        defer { stallMonitor.stop() }
+        let stallMonitor = stallTimeout > 0 ? CLIServeStallMonitor(stallThreshold: stallTimeout) : nil
+        stallMonitor?.start()
+        defer { stallMonitor?.stop() }
 
         do {
             try await server.run {
@@ -877,6 +895,13 @@ extension CodexBarCLI {
             parsed = Self.defaultServeRequestTimeout
         }
         guard parsed.isFinite, parsed >= 0 else { return nil }
+        return parsed
+    }
+
+    /// Zero keeps the stall monitor off, which is the default.
+    static func decodeServeStallTimeout(from values: ParsedValues) -> TimeInterval? {
+        guard let raw = values.options["stallTimeout"]?.last else { return 0 }
+        guard let parsed = Double(raw), parsed.isFinite, parsed >= 0 else { return nil }
         return parsed
     }
 

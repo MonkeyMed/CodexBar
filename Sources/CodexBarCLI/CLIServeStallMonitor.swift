@@ -11,10 +11,10 @@ import Foundation
 ///
 /// Every request, refresh, and timeout in `codexbar serve` runs on the cooperative pool. When all of its threads
 /// block, the accept loop keeps taking connections but nothing answers them, so the process looks alive to a
-/// supervisor while every client gets a closed socket. Failing fast lets the supervisor restart the server.
+/// supervisor while every client gets a closed socket. Failing fast lets the supervisor restart the server, so
+/// `serve` only starts the monitor when `--stall-timeout` asks for it.
 final class CLIServeStallMonitor: @unchecked Sendable {
-    static let defaultStallThreshold: TimeInterval = 120
-    static let defaultCheckInterval: TimeInterval = 5
+    static let maximumCheckInterval: TimeInterval = 5
 
     private let stallThreshold: TimeInterval
     private let checkInterval: TimeInterval
@@ -24,14 +24,19 @@ final class CLIServeStallMonitor: @unchecked Sendable {
     private var stopped = false
     private var heartbeatTask: Task<Void, Never>?
 
+    /// Without an explicit `checkInterval`, heartbeats and checks run at least four times per threshold.
     init(
-        stallThreshold: TimeInterval = CLIServeStallMonitor.defaultStallThreshold,
-        checkInterval: TimeInterval = CLIServeStallMonitor.defaultCheckInterval,
+        stallThreshold: TimeInterval,
+        checkInterval: TimeInterval? = nil,
         onStall: @escaping @Sendable (TimeInterval) -> Void = CLIServeStallMonitor.abortProcess)
     {
         self.stallThreshold = stallThreshold
-        self.checkInterval = checkInterval
+        self.checkInterval = checkInterval ?? Self.checkInterval(forThreshold: stallThreshold)
         self.onStall = onStall
+    }
+
+    static func checkInterval(forThreshold stallThreshold: TimeInterval) -> TimeInterval {
+        min(self.maximumCheckInterval, stallThreshold / 4)
     }
 
     func start() {

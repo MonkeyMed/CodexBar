@@ -1,3 +1,4 @@
+import Commander
 import Foundation
 import Testing
 @testable import CodexBarCLI
@@ -58,6 +59,38 @@ struct CLIServeStallMonitorTests {
         try await Task.sleep(for: .seconds(0.6))
 
         #expect(recorder.isEmpty)
+    }
+
+    @Test
+    func `stall timeout is off unless requested`() {
+        func decode(_ raw: String?) -> TimeInterval? {
+            CodexBarCLI.decodeServeStallTimeout(from: ParsedValues(
+                positional: [],
+                options: raw.map { ["stallTimeout": [$0]] } ?? [:],
+                flags: []))
+        }
+
+        #expect(decode(nil) == 0)
+        #expect(decode("0") == 0)
+        #expect(decode("120") == 120)
+        #expect(decode("soon") == nil)
+        #expect(decode("-1") == nil)
+        #expect(decode("inf") == nil)
+    }
+
+    @Test
+    func `check interval follows short thresholds`() {
+        #expect(CLIServeStallMonitor.checkInterval(forThreshold: 120) == 5)
+        #expect(CLIServeStallMonitor.checkInterval(forThreshold: 8) == 2)
+    }
+
+    @Test
+    func `serve help documents the stall timeout option`() {
+        let serve = CodexBarCLI.serveHelp(version: "0.0.0")
+
+        #expect(serve.contains("--stall-timeout <seconds>"))
+        #expect(serve.contains("off by"))
+        #expect(CodexBarCLI.rootHelp(version: "0.0.0").contains("--stall-timeout <seconds>"))
     }
 
     private static func waitUntil(_ condition: () -> Bool) async -> Bool {

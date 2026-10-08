@@ -4,6 +4,7 @@
 
 ### Added
 
+- CLI: add an opt-in `codexbar serve --stall-timeout <seconds>` that aborts a server whose executor has stopped making progress, so a supervisor can restart it instead of leaving it alive but unresponsive.
 - Linux: add an opt-in compact Quick View with provider tabs and cached spending warnings, keeping the full Usage & Spend window as the default (#3973). Thanks @stackingrockss!
 - Localization: complete app and widget translations in all 23 supported languages, including credential alerts, share cards, and provider settings, with widgets following the system language (#4223). Thanks @DGPisces and @Yuxin-Qiao!
 - HTTP dashboard: opt into live profile and configured account usage with `serve --all-accounts`, private labels and errors by default, and healthy results retained when another account times out (#3890). Thanks @roboclaw-bot and @VACInc!

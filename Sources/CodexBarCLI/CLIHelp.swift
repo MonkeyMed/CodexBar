@@ -225,7 +225,7 @@ extension CodexBarCLI {
 
         Usage:
           codexbar serve [--host <host>] [--port <port>] [--refresh-interval <seconds>]
-                         [--request-timeout <seconds>]
+                         [--request-timeout <seconds>] [--stall-timeout <seconds>]
                          [--dashboard-token <token>] [--allow-plain-http]
                          [--identity <redacted|full>] [--all-accounts]
                          [--json-output] [--log-level <trace|verbose|debug|info|warning|error|critical>]
@@ -253,6 +253,10 @@ extension CodexBarCLI {
           --identity redacted keeps email domains but hides labels and error details.
           /usage keeps its existing Codex enumeration.
 
+          --stall-timeout aborts the process when the server makes no progress at all for that
+          many seconds, so a supervisor such as systemd or launchd can restart it. It is off by
+          default; without a supervisor the server stays down after the abort.
+
           Account IDs are stable opaque identifiers; clients must not parse their internal format.
           Account discovery reads metadata only and never returns credentials or refreshes usage.
 
@@ -271,6 +275,7 @@ extension CodexBarCLI {
         Examples:
           codexbar serve
           codexbar serve --port 8080 --refresh-interval 60 --request-timeout 30
+          codexbar serve --stall-timeout 120
           CODEXBAR_DASHBOARD_TOKEN=YOUR_TOKEN codexbar serve
           CODEXBAR_DASHBOARD_TOKEN=... codexbar serve --host 0.0.0.0 --allow-plain-http
           curl http://127.0.0.1:8080/usage?provider=all
@@ -513,7 +518,7 @@ extension CodexBarCLI {
           codexbar codex-accounts <list|promote> [--json] [--pretty]
           codexbar dashboard [--pretty] [--timeout <seconds>] [--output <path>]
           codexbar serve [--host <host>] [--port <port>] [--refresh-interval <seconds>]
-                       [--request-timeout <seconds>]
+                       [--request-timeout <seconds>] [--stall-timeout <seconds>]
                        [--dashboard-token <token>] [--allow-plain-http]
                        [--json-output] [--log-level <trace|verbose|debug|info|warning|error|critical>] [-v|--verbose]
           codexbar config <validate|dump|providers> [--format text|json]
