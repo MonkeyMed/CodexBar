@@ -1,0 +1,66 @@
+{
+  "artifact": "synthetic tool activity stability validation receipt",
+  "code_revision": "fc00a9ae833be637aa0bb571152b1310969dc88b",
+  "production_source_tree": "b554cdb002681e2988993614c1c0ca7a98198022",
+  "binary_sha256": "8a559ef7d3f1d6b1ccfe8d4a7f4c453f5d54d9fdf1fbf6129fc28165cc98132b",
+  "fixture": "entirely fictitious native session records in an isolated app and profile",
+  "credentials": "Keychain, account refresh and browser imports disabled",
+  "focused": {
+    "tests": 248,
+    "suites": 11,
+    "passed": true
+  },
+  "full_regression": {
+    "selections": 1625,
+    "groups": 45,
+    "first_pass_successful_groups": 45,
+    "failed_groups": 0,
+    "retries": 0,
+    "timeouts": 0,
+    "seconds": 709.2
+  },
+  "format_and_lint": {
+    "passed": true,
+    "violations": 0,
+    "swift_files": 2900
+  },
+  "native_interactions": {
+    "successful_checks": 41,
+    "distinct_scenarios": 21,
+    "same_identity_result_updates_while_expanded": 25,
+    "collapse_expand_cycles": 100,
+    "refreshes_within_expansion_cycles": 25,
+    "privacy_on_off_rounds": 5,
+    "settings_close_reopen_cycles": 15,
+    "synthetic_log_restored": true,
+    "privacy_setting_restored": true,
+    "app_alive_after_stress": true
+  },
+  "native_resources": {
+    "idle_samples": 6,
+    "idle_cpu_percent_max": 0.0,
+    "idle_rss_mib_min": 171.8,
+    "idle_rss_mib_max": 172.5,
+    "new_synthetic_app_crash_reports": 0,
+    "scope": "short checks on one machine; resident memory is not a retained-heap measurement and does not establish absence of leaks"
+  },
+  "regressions": [
+    "Out-of-order and already-cancelled detail loads cannot overwrite or clear a newer result",
+    "Privacy-hidden and collapsed detail bodies are released without starting reads",
+    "Refresh retains disclosure state and displays the new result for the same operation identity",
+    "Global in-memory index cache retains at most four snapshots and 20000 operations in total",
+    "Oversized Unicode graphemes are bounded in UTF-8 bytes as well as characters",
+    "Oversized native identities produce partial coverage; 20001 operations respect the 20000 index cap",
+    "Fifty atomic file replacements reject stale snapshots and return each current result"
+  ],
+  "attempt_notes": [
+    "An earlier runtime check found refresh collapsed the detail row; the final code retains its state and the 25-update regression passes",
+    "A prior full regression run and one accessibility capture were interrupted by host disk exhaustion; obsolete compiler caches were removed, evidence originals preserved, and the complete regression rerun passed",
+    "The window harness initially assumed reopening on the spend pane; it now verifies the actual settings window identity and selects the required pane before each check; incomplete harness attempts are excluded from successful counts"
+  ],
+  "limits": [
+    "Native Codex item_completed records only",
+    "Partial coverage is explicit when records or scan limits are incomplete",
+    "No long-term stability or complete historical-schema coverage claim"
+  ]
+}

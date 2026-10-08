@@ -37,5 +37,21 @@
     "retries": 0,
     "timeouts": 0
   },
-  "production_source_tree": "e6d1c27ec2c9b5dfaca7f15a5a8fe7d90b6c4d15"
+  "production_source_tree": "e6d1c27ec2c9b5dfaca7f15a5a8fe7d90b6c4d15",
+  "latest_verification": {
+    "code_revision": "fc00a9ae833be637aa0bb571152b1310969dc88b",
+    "production_source_tree": "b554cdb002681e2988993614c1c0ca7a98198022",
+    "upgrade_parameter_cases_passed": 2,
+    "focused_tests": 248,
+    "full_regression": {
+      "selections": 1625,
+      "groups": 45,
+      "first_pass_successful_groups": 45,
+      "failed_groups": 0,
+      "retries": 0,
+      "timeouts": 0,
+      "seconds": 709.2
+    },
+    "note": "The original before-fix receipt above is historical; the preservation case and full suite were rerun after rebasing onto current main."
+  }
 }

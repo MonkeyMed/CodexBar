@@ -1,12 +1,12 @@
 {
   "artifact": "redacted derivative of actual native accessibility observations",
   "input": "unmodified frozen copy of an existing native session",
-  "binary_sha256": "aecb6787fe9d88fc98f8bf4e6ecdad6f147d4ffbf4debe02f66ff667db794df3",
-  "code_revision": "7169f322d9998d83fc7dafc38fc4367871146ee8",
+  "binary_sha256": "8a559ef7d3f1d6b1ccfe8d4a7f4c453f5d54d9fdf1fbf6129fc28165cc98132b",
+  "code_revision": "fc00a9ae833be637aa0bb571152b1310969dc88b",
   "credential_access_disabled": true,
-  "production_source_tree": "e6d1c27ec2c9b5dfaca7f15a5a8fe7d90b6c4d15",
+  "production_source_tree": "b554cdb002681e2988993614c1c0ca7a98198022",
   "redaction": "All private paths, identifiers, commands, arguments, results, dates, durations, counts, usage and cost are omitted or replaced with consistent aliases. Complete originals remain local.",
-  "capture_notes": "Early attempts that did not reach the expected state are excluded: scrolling was needed to instantiate lazy rows, and the privacy notice itself contains the word result. The successful privacy check compares exact field labels and original input/result content.",
+  "capture_notes": "Captures are taken only after the expected native state is reached. Scrolling instantiates lazy rows; privacy checks compare exact field labels and original input/result content, rather than the word result in the privacy notice.",
   "checks": [
     {
       "action": "native dashboard discovers and indexes the frozen real session",

@@ -58,7 +58,9 @@ growth. UTF-8 prefixes end on valid scalar boundaries; shortened detail text is 
 Detail presentation is keyed by the operation and source file identity, size and modification date.
 An older body's display is suppressed immediately when the key changes, before the next asynchronous
 load starts. Superseded reads cannot replace a newer result or error state. Collapsed and privacy-hidden
-details release their bodies; cancelled reads do not publish a changed-file warning.
+details release their bodies; cancelled reads do not publish a changed-file warning. Refreshing retains
+the expanded list and operation disclosure states while showing a loading indicator, then replaces
+their results with the current indexed records.
 
 The section deliberately describes operations in the selected local log, not a guaranteed whole-session
 history. Older clients may have no native operation records. Cross-session rankings/trends, full call
@@ -115,3 +117,18 @@ current-main fingerprint and passes after compatibility adoption is added. Both 
 stable stores retain typed saved-pricing rows, ledger state and checkpoints across two opens after
 the original log is removed, with unchanged database identity and zero rebuilds. Existing regressions
 also cover previous report payloads, unfinished-line resume state and zero session-head reparses.
+
+## Stability validation
+
+[Stability receipt](fixtures/spend-tool-activity-stability-proof.json) binds the final packaged code
+and Sources tree to 248 focused tests, the complete 1,625-selection regression and 41 successful
+native interaction checks (21 distinct scenarios). Actual window checks include 25 same-identity
+result updates while expanded, 100 collapse/expand cycles, 25 refreshes during those cycles, five
+privacy on/off rounds and 15 settings close/reopen cycles. Fixtures are entirely fictitious.
+
+The final full regression passed all 45 groups without retries, failures or timeouts. Short post-test
+idle sampling returned to 0% CPU, and no new isolated-app crash reports were found. This is evidence
+for the exercised paths on one machine, not a long-term leak or schema-compatibility guarantee.
+A host disk-capacity interruption and initial harness selector assumptions are recorded separately
+in the receipt; incomplete attempts are excluded from the successful counts. The five real-session
+checks in the redacted transcript were also rerun against the same packaged code and original input.
