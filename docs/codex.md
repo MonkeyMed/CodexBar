@@ -114,6 +114,9 @@ conflicting credentials abort the promotion.
 Refreshed copies are read back before their fingerprints are committed, and every preserved copy is checked
 again immediately before the live replacement. External writers can still race after the final read.
 
+Saved-account removal and import repair retain an old managed home while another saved record references
+the same path. Cleanup still requires the managed-home safety checks and releases the home after its last reference.
+
 CLI promotion reads local files only and never requests Keychain access or starts login. It leaves
 the app's display selection and running Codex processes alone; `CODEX_HOME` selects the live destination.
 That destination must not alias a managed home, because the swap would overwrite its preserved credentials.

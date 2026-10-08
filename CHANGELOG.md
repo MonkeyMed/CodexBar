@@ -2,6 +2,10 @@
 
 ## 0.73.1 — Unreleased
 
+### Fixed
+
+- Codex: keep managed credential homes still referenced by another saved account during removal or import repair (#4342). Thanks @vincent-peng!
+
 ## 0.73.0 — 2026-10-07
 
 ### Highlights
