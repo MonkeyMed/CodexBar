@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- Linux: keep a long-running `codexbar serve` near its working-set memory by capping glibc malloc arenas and returning freed heap pages to the kernel while it is idle.
 - Usage & Spend: reduce annual token activity update work by reusing calendar dates, coverage, and localized date formatters without changing chart output (#4328). Thanks @Yuxin-Qiao!
 - Notion AI: recover usage for a configured workspace when large workspace/member lists exceed the plugin response limit, and explain how to configure a workspace when needed (#4341). Thanks @optemism!
 - Codex: ignore commented-out usage endpoint overrides, so disabled proxies cannot shadow active configuration or the default endpoint (#4330). Thanks @lishouxian!
