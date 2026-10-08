@@ -743,6 +743,10 @@ extension CodexBarCLI {
                 kind: .args)
         }
 
+        let heapTrimmer = CLIServeHeapTrimmer()
+        heapTrimmer.start()
+        defer { heapTrimmer.stop() }
+
         // Resolve the running build version once, at startup, before an in-place
         // app/tarball update can replace the on-disk binary. Resolving it lazily
         // per request would let a stale serve report the newly installed version
