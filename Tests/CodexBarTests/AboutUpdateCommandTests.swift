@@ -33,12 +33,12 @@ final class AboutUpdateCommandTests: XCTestCase {
             let write = try XCTUnwrap(probe.pendingWrite)
             probe.pendingWrite = nil
             write()
-            XCTAssertEqual(probe.writes, ["brew upgrade --cask steipete/tap/codexbar"])
+            XCTAssertEqual(probe.writes, ["brew upgrade --cask codexbar"])
         }
     }
 
     func test_genericUnavailableMessageDoesNotInventHomebrewAction() throws {
-        let updater = DisabledUpdaterController(unavailableReason: "Run: brew upgrade --cask steipete/tap/codexbar")
+        let updater = DisabledUpdaterController(unavailableReason: "Run: brew upgrade --cask codexbar")
         let probe = AboutCopyTriggerProbe()
         defer { probe.press = nil }
         let row = try AboutUpdatesUnavailableView(

@@ -86,6 +86,42 @@ struct InstallOriginTests {
         }
     }
 
+    @Test
+    func `reads the owning tap from the install receipt`() throws {
+        try self.withFixture { root, app, artifact in
+            try FileManager.default.createSymbolicLink(at: artifact, withDestinationURL: app)
+            let caskrooms = [root.appendingPathComponent("brew/Caskroom")]
+            #expect(InstallOrigin.homebrewCaskTap(appBundleURL: app, caskroomURLs: caskrooms) == nil)
+
+            try self.writeReceipt(in: root, tap: "homebrew/cask")
+            #expect(InstallOrigin.homebrewCaskTap(appBundleURL: app, caskroomURLs: caskrooms) == "homebrew/cask")
+
+            try self.writeReceipt(in: root, tap: "steipete/tap")
+            #expect(InstallOrigin.homebrewCaskTap(appBundleURL: app, caskroomURLs: caskrooms) == "steipete/tap")
+        }
+    }
+
+    @Test
+    func `unrelated apps have no cask tap`() throws {
+        try self.withFixture { root, app, _ in
+            let other = root.appendingPathComponent("Other/CodexBar.app")
+            try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+            #expect(InstallOrigin.homebrewCaskTap(
+                appBundleURL: other, caskroomURLs: [root.appendingPathComponent("brew/Caskroom")]) == nil)
+            #expect(InstallOrigin.homebrewCaskTap(
+                appBundleURL: app, caskroomURLs: [root.appendingPathComponent("beware")]) == nil)
+        }
+    }
+
+    private func writeReceipt(in root: URL, tap: String) throws {
+        let metadata = root.appendingPathComponent("brew/Caskroom/codexbar/.metadata")
+        try FileManager.default.createDirectory(at: metadata, withIntermediateDirectories: true)
+        let json = """
+        { "source": { "tap": "\(tap)", "version": "0.59.0" } }
+        """
+        try json.write(to: metadata.appendingPathComponent("INSTALL_RECEIPT.json"), atomically: true, encoding: .utf8)
+    }
+
     private func withFixture(_ body: (_ root: URL, _ app: URL, _ artifact: URL) throws -> Void) throws {
         let fileManager = FileManager.default
         let root = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)

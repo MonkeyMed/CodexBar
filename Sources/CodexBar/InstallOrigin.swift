@@ -21,6 +21,37 @@ enum InstallOrigin {
         return prefixes.count == 1 ? prefixes[0] : nil
     }
 
+    /// The tap recorded in the owning cask receipt, if determinable. Nil when the app is not a Homebrew
+    /// cask install or the receipt cannot be read. `brew upgrade --cask codexbar` resolves through the
+    /// same receipt, so the in-app updater is restricted to the tap that owns the install.
+    static func homebrewCaskTap(
+        appBundleURL: URL,
+        caskroomURLs: [URL] = Self.caskroomURLs) -> String?
+    {
+        guard let prefix = self.homebrewPrefix(appBundleURL: appBundleURL, caskroomURLs: caskroomURLs) else {
+            return nil
+        }
+        let metadata = prefix.appendingPathComponent("Caskroom/codexbar/.metadata")
+        let fileManager = FileManager.default
+        guard let enumerator = fileManager.enumerator(at: metadata, includingPropertiesForKeys: nil) else { return nil }
+        var receiptURLs: [URL] = []
+        for case let url as URL in enumerator where url.lastPathComponent == "INSTALL_RECEIPT.json" {
+            receiptURLs.append(url)
+        }
+        let receipt = receiptURLs.max { lhs, rhs in
+            (try? lhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+                < (try? rhs.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ??
+                .distantPast
+        }
+        guard let receipt,
+              let data = try? Data(contentsOf: receipt),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let source = json["source"] as? [String: Any],
+              let tap = source["tap"] as? String, !tap.isEmpty
+        else { return nil }
+        return tap
+    }
+
     private static func homebrewPrefixes(appBundleURL: URL, caskroomURLs: [URL]) -> [URL] {
         let resolved = appBundleURL.resolvingSymlinksInPath().standardizedFileURL
         var prefixes: [URL] = []

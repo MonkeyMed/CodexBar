@@ -214,7 +214,7 @@ extension HomebrewUpdaterController.Dependencies {
             binary: brew, arguments: ["update"], environment: environment, label: "homebrew-update")
         return try await SubprocessRunner.runToCompletion(
             binary: brew,
-            arguments: ["upgrade", "--cask", "steipete/tap/codexbar"],
+            arguments: ["upgrade", "--cask", "codexbar"],
             environment: environment,
             label: "homebrew-upgrade")
     }

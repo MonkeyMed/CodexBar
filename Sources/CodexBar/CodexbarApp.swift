@@ -171,7 +171,7 @@ enum ManualUpdateCommand: Sendable {
 
     var command: String {
         switch self {
-        case .homebrew: "brew upgrade --cask steipete/tap/codexbar"
+        case .homebrew: "brew upgrade --cask codexbar"
         }
     }
 }
@@ -348,8 +348,13 @@ private func makeUpdaterController() -> UpdaterProviding {
     }
 
     if InstallOrigin.isHomebrewCask(appBundleURL: bundleURL) {
-        return HomebrewUpdaterController(
-            savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true)
+        // One-click updates only apply to side-loaded tap installs; the app's own tap is the
+        // supported update feed. Official homebrew/cask installs stay managed by Homebrew.
+        if InstallOrigin.homebrewCaskTap(appBundleURL: bundleURL) == "steipete/tap" {
+            return HomebrewUpdaterController(
+                savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true)
+        }
+        return DisabledUpdaterController(unavailableReason: L("Managed by Homebrew"))
     }
 
     guard isDeveloperIDSigned(bundleURL: bundleURL) else {

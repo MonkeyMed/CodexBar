@@ -22,7 +22,7 @@ struct HomebrewUpgradeCommandTests {
         let result = try await HomebrewUpdaterController.Dependencies.upgrade(
             appBundleURL: fixture.app, caskroomURLs: fixture.caskrooms)
         #expect(result.stdout.split(separator: "\n").map(String.init) == [
-            "upgrade", "--cask", "steipete/tap/codexbar", "1", "1", "1",
+            "upgrade", "--cask", "codexbar", "1", "1", "1",
         ])
     }
 
