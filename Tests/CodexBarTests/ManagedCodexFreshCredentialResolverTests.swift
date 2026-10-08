@@ -19,7 +19,7 @@ struct ManagedCodexFreshCredentialResolverTests {
             return
         }
         #expect(store.hydratingReadCount == 0)
-        #expect(store.metadataReadCount == 2)
+        #expect(store.metadataWasLoaded)
     }
 
     @Test
@@ -28,7 +28,8 @@ struct ManagedCodexFreshCredentialResolverTests {
         let snapshot = NativeCodexAccessSnapshot(
             accessToken: canary,
             expiresAt: Date(timeIntervalSince1970: 1_700_003_600),
-            nativeDefaultAccountID: "acct-synthetic")
+            nativeDefaultAccountID: "acct-synthetic",
+            nativeOwnerEmail: canary)
 
         #expect(!snapshot.description.contains(canary))
         #expect(!snapshot.debugDescription.contains(canary))
@@ -45,7 +46,8 @@ struct ManagedCodexFreshCredentialResolverTests {
             NativeCodexAccessSnapshot(
                 accessToken: canary,
                 expiresAt: fixture.now.addingTimeInterval(3600),
-                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID)
+                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID,
+                nativeOwnerEmail: fixture.account.email)
         }
 
         let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 120)
@@ -127,7 +129,8 @@ struct ManagedCodexFreshCredentialResolverTests {
             NativeCodexAccessSnapshot(
                 accessToken: "synthetic-access",
                 expiresAt: fixture.now.addingTimeInterval(3600),
-                nativeDefaultAccountID: "acct-other")
+                nativeDefaultAccountID: "acct-other",
+                nativeOwnerEmail: fixture.account.email)
         }
 
         let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
@@ -146,7 +149,8 @@ struct ManagedCodexFreshCredentialResolverTests {
             NativeCodexAccessSnapshot(
                 accessToken: "synthetic-access",
                 expiresAt: fixture.now.addingTimeInterval(3600),
-                nativeDefaultAccountID: "acct-native-default")
+                nativeDefaultAccountID: "acct-native-default",
+                nativeOwnerEmail: fixture.account.email)
         }
 
         let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
@@ -164,7 +168,8 @@ struct ManagedCodexFreshCredentialResolverTests {
             NativeCodexAccessSnapshot(
                 accessToken: "synthetic-access",
                 expiresAt: fixture.now.addingTimeInterval(3600),
-                nativeDefaultAccountID: nil)
+                nativeDefaultAccountID: nil,
+                nativeOwnerEmail: fixture.account.email)
         }
 
         let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
@@ -232,7 +237,8 @@ struct ManagedCodexFreshCredentialResolverTests {
             NativeCodexAccessSnapshot(
                 accessToken: "synthetic-access",
                 expiresAt: expirationOffset.map { fixture.now.addingTimeInterval($0) },
-                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID)
+                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID,
+                nativeOwnerEmail: fixture.account.email)
         }
 
         let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 120)
@@ -257,7 +263,8 @@ struct ManagedCodexFreshCredentialResolverTests {
             NativeCodexAccessSnapshot(
                 accessToken: "synthetic-access",
                 expiresAt: fixture.now.addingTimeInterval(expirationOffset),
-                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID)
+                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID,
+                nativeOwnerEmail: fixture.account.email)
         }
 
         let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
@@ -281,7 +288,8 @@ struct ManagedCodexFreshCredentialResolverTests {
             NativeCodexAccessSnapshot(
                 accessToken: "synthetic-access",
                 expiresAt: fixture.now.addingTimeInterval(200),
-                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID)
+                nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID,
+                nativeOwnerEmail: fixture.account.email)
         }
 
         guard case .ready = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0) else {
@@ -384,7 +392,10 @@ struct ManagedCodexFreshCredentialResolverTests {
     func `resolver classifies native OAuth and rejects a native API key without external fallback`() throws {
         let fixture = try Self.fixture()
         let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
-        try Self.authData(access: access, accountID: fixture.account.effectiveWorkspaceAccountID)
+        try Self.authData(
+            access: access,
+            accountID: fixture.account.effectiveWorkspaceAccountID,
+            ownerEmail: fixture.account.email)
             .write(to: fixture.authURL)
         let native = ManagedCodexAccountCredentialResolver(
             store: fixture.store,
@@ -408,6 +419,205 @@ struct ManagedCodexFreshCredentialResolverTests {
         #expect(reason == .unsupportedCredentialSource)
     }
 
+    @Test
+    func `production reader binds matching owner without writing credentials or registry`() throws {
+        let fixture = try Self.fixture()
+        let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
+        try Self.authData(
+            access: access,
+            accountID: fixture.account.effectiveWorkspaceAccountID,
+            rawIDToken: Self.jwt(payload: [
+                "https://api.openai.com/profile": ["email": " Resolver@Example.COM "],
+            ]))
+            .write(to: fixture.authURL)
+        let registryURL = fixture.root.appendingPathComponent("managed-accounts.json")
+        let store = FileManagedCodexAccountStore(fileURL: registryURL)
+        try store.storeAccounts(ManagedCodexAccountSet(
+            version: FileManagedCodexAccountStore.currentVersion,
+            accounts: [fixture.account]))
+        let authBefore = try Data(contentsOf: fixture.authURL)
+        let registryBefore = try Data(contentsOf: registryURL)
+        let authAttributesBefore = try FileManager.default.attributesOfItem(atPath: fixture.authURL.path)
+        let registryAttributesBefore = try FileManager.default.attributesOfItem(atPath: registryURL.path)
+        let resolver = ManagedCodexAccountCredentialResolver(
+            store: store,
+            managedHomeRoot: fixture.root,
+            now: { fixture.now })
+
+        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        guard case let .ready(credential) = resolution else {
+            Issue.record("Matching synthetic owner should resolve through the production reader")
+            return
+        }
+        #expect(credential.access.withAccessToken { $0 == access })
+        #expect(try Data(contentsOf: fixture.authURL) == authBefore)
+        #expect(try Data(contentsOf: registryURL) == registryBefore)
+        #expect(try FileManager.default.attributesOfItem(atPath: fixture.authURL.path)[.modificationDate] as? Date
+            == authAttributesBefore[.modificationDate] as? Date)
+        #expect(try FileManager.default.attributesOfItem(atPath: registryURL.path)[.modificationDate] as? Date
+            == registryAttributesBefore[.modificationDate] as? Date)
+    }
+
+    @Test
+    func `production reader rejects another login in the selected shared workspace`() throws {
+        let fixture = try Self.fixture()
+        let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
+        try Self.authData(
+            access: access,
+            accountID: fixture.account.effectiveWorkspaceAccountID,
+            ownerEmail: "other-login@example.com")
+            .write(to: fixture.authURL)
+        let resolver = ManagedCodexAccountCredentialResolver(
+            store: fixture.store,
+            managedHomeRoot: fixture.root,
+            now: { fixture.now })
+
+        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        Self.expectBindingEvidenceFailure(resolution, scenario: "shared workspace wrong login")
+    }
+
+    @Test
+    func `production reader rejects another login for a legacy unscoped account`() throws {
+        let fixture = try Self.fixture(workspaceAccountID: nil)
+        let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
+        try Self.authData(
+            access: access,
+            accountID: "acct-native-default",
+            ownerEmail: "other-login@example.com")
+            .write(to: fixture.authURL)
+        let resolver = ManagedCodexAccountCredentialResolver(
+            store: fixture.store,
+            managedHomeRoot: fixture.root,
+            now: { fixture.now })
+
+        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        Self.expectBindingEvidenceFailure(resolution, scenario: "legacy unscoped wrong login")
+    }
+
+    @Test
+    func `production reader rejects missing malformed or ambiguous native owner identity`() throws {
+        let cases: [(scenario: String, idToken: String?)] = [
+            ("missing owner", nil),
+            ("malformed owner", "not-a-jwt"),
+            ("non-string owner", Self.jwt(payload: ["email": 42])),
+            ("ambiguous owner", Self.jwt(payload: [
+                "email": "one@example.com",
+                "https://api.openai.com/profile": ["email": "two@example.com"],
+            ])),
+        ]
+        for candidate in cases {
+            let fixture = try Self.fixture()
+            let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
+            try Self.authData(
+                access: access,
+                accountID: fixture.account.effectiveWorkspaceAccountID,
+                rawIDToken: candidate.idToken)
+                .write(to: fixture.authURL)
+            let resolver = ManagedCodexAccountCredentialResolver(
+                store: fixture.store,
+                managedHomeRoot: fixture.root,
+                now: { fixture.now })
+
+            let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+            Self.expectBindingEvidenceFailure(resolution, scenario: candidate.scenario)
+        }
+    }
+
+    @Test
+    func `production reader keeps owner and workspace checks independent`() throws {
+        let fixture = try Self.fixture()
+        let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
+        try Self.authData(
+            access: access,
+            accountID: "acct-other",
+            ownerEmail: fixture.account.email)
+            .write(to: fixture.authURL)
+        let resolver = ManagedCodexAccountCredentialResolver(
+            store: fixture.store,
+            managedHomeRoot: fixture.root,
+            now: { fixture.now })
+
+        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        guard case let .unsupported(reason) = resolution else {
+            Issue.record("A correct owner with the wrong workspace must not resolve")
+            return
+        }
+        #expect(reason == .workspaceScope)
+    }
+
+    @Test
+    func `production reader does not fall back to another registry account with the native owner`() throws {
+        let fixture = try Self.fixture()
+        let otherAccount = ManagedCodexAccount(
+            id: UUID(),
+            email: "other-login@example.com",
+            workspaceAccountID: fixture.account.effectiveWorkspaceAccountID,
+            managedHomePath: fixture.account.managedHomePath,
+            createdAt: fixture.now.timeIntervalSince1970,
+            updatedAt: fixture.now.timeIntervalSince1970,
+            lastAuthenticatedAt: fixture.now.timeIntervalSince1970)
+        let access = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600)])
+        try Self.authData(
+            access: access,
+            accountID: fixture.account.effectiveWorkspaceAccountID,
+            ownerEmail: otherAccount.email)
+            .write(to: fixture.authURL)
+        let resolver = ManagedCodexAccountCredentialResolver(
+            store: InMemoryStore(accounts: [fixture.account, otherAccount]),
+            managedHomeRoot: fixture.root,
+            now: { fixture.now })
+
+        let resolution = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        Self.expectBindingEvidenceFailure(resolution, scenario: "another registry owner")
+    }
+
+    @Test
+    func `production reader observes credential replacement without caching the old owner`() throws {
+        let fixture = try Self.fixture()
+        let firstAccess = Self.jwt(payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600), "marker": "first"])
+        try Self.authData(
+            access: firstAccess,
+            accountID: fixture.account.effectiveWorkspaceAccountID,
+            ownerEmail: fixture.account.email)
+            .write(to: fixture.authURL)
+        let resolver = ManagedCodexAccountCredentialResolver(
+            store: fixture.store,
+            managedHomeRoot: fixture.root,
+            now: { fixture.now })
+        guard case .ready = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0) else {
+            Issue.record("Initial matching owner should resolve")
+            return
+        }
+        let replacementAccess = Self.jwt(
+            payload: ["exp": Int(fixture.now.timeIntervalSince1970 + 3600), "marker": "replacement"])
+        try Self.authData(
+            access: replacementAccess,
+            accountID: fixture.account.effectiveWorkspaceAccountID,
+            ownerEmail: "replacement@example.com")
+            .write(to: fixture.authURL)
+
+        let replacement = resolver.resolve(accountID: fixture.account.id, minimumValidity: 0)
+
+        Self.expectBindingEvidenceFailure(replacement, scenario: "credential replacement")
+    }
+
+    private static func expectBindingEvidenceFailure(
+        _ resolution: ManagedCodexCredentialResolution,
+        scenario: String)
+    {
+        guard case let .unsupported(reason) = resolution else {
+            Issue.record("Expected binding evidence failure for \(scenario)")
+            return
+        }
+        #expect(reason == .bindingEvidenceInsufficient)
+    }
+
     private static func resolver(
         fixture: Fixture,
         snapshotReader: @escaping @Sendable (URL) throws -> NativeCodexAccessSnapshot)
@@ -425,7 +635,8 @@ struct ManagedCodexFreshCredentialResolverTests {
         NativeCodexAccessSnapshot(
             accessToken: "synthetic-access",
             expiresAt: fixture.now.addingTimeInterval(3600),
-            nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID)
+            nativeDefaultAccountID: fixture.account.effectiveWorkspaceAccountID,
+            nativeOwnerEmail: fixture.account.email)
     }
 
     private static func fixture(
@@ -460,14 +671,25 @@ struct ManagedCodexFreshCredentialResolverTests {
             store: InMemoryStore(accounts: [account]))
     }
 
-    private static func authData(access: String, accountID: String?) throws -> Data {
-        try JSONSerialization.data(withJSONObject: [
-            "tokens": [
-                "access_token": access,
-                "refresh_token": "synthetic-refresh-not-returned",
-                "account_id": accountID as Any,
-            ],
-        ])
+    private static func authData(
+        access: String,
+        accountID: String?,
+        ownerEmail: String? = nil,
+        rawIDToken: String? = nil) throws -> Data
+    {
+        var tokens: [String: Any] = [
+            "access_token": access,
+            "refresh_token": "synthetic-refresh-not-returned",
+        ]
+        if let accountID {
+            tokens["account_id"] = accountID
+        }
+        if let rawIDToken {
+            tokens["id_token"] = rawIDToken
+        } else if let ownerEmail {
+            tokens["id_token"] = Self.jwt(payload: ["email": ownerEmail])
+        }
+        return try JSONSerialization.data(withJSONObject: ["tokens": tokens])
     }
 
     private static func jwt(payload: [String: Any]) -> String {
@@ -492,7 +714,7 @@ struct ManagedCodexFreshCredentialResolverTests {
     {
         let accounts: [ManagedCodexAccount]
         private(set) var hydratingReadCount = 0
-        private(set) var metadataReadCount = 0
+        private(set) var metadataWasLoaded = false
 
         init(accounts: [ManagedCodexAccount]) {
             self.accounts = accounts
@@ -506,7 +728,7 @@ struct ManagedCodexFreshCredentialResolverTests {
         }
 
         func loadAccountMetadata() throws -> ManagedCodexAccountSet {
-            self.metadataReadCount += 1
+            self.metadataWasLoaded = true
             return ManagedCodexAccountSet(
                 version: FileManagedCodexAccountStore.currentVersion,
                 accounts: self.accounts)

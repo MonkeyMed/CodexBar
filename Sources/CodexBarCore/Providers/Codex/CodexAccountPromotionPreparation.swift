@@ -226,10 +226,8 @@ package struct PreparedPromotionContextBuilder {
         }
         let payload = idToken.flatMap(UsageFetcher.parseJWT)
         let authDict = payload?["https://api.openai.com/auth"] as? [String: Any]
-        let profileDict = payload?["https://api.openai.com/profile"] as? [String: Any]
 
-        let email = CodexIdentityResolver.normalizeEmail(
-            (payload?["email"] as? String) ?? (profileDict?["email"] as? String))
+        let email = CodexNativeCredentialOwnerIdentity.normalizedEmail(fromIDToken: idToken)
         let plan = Self.normalizedField(
             (authDict?["chatgpt_plan_type"] as? String) ?? (payload?["chatgpt_plan_type"] as? String))
         let accountID = ManagedCodexAccount.normalizeWorkspaceAccountID(

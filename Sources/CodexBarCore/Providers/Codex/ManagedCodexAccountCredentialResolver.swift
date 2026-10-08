@@ -54,6 +54,7 @@ struct NativeCodexAccessSnapshot: Sendable, CustomStringConvertible, CustomDebug
     let accessToken: String
     let expiresAt: Date?
     let nativeDefaultAccountID: String?
+    let nativeOwnerEmail: String?
 
     var description: String {
         "NativeCodexAccessSnapshot(redacted)"
@@ -75,7 +76,9 @@ struct NativeCodexAccessSnapshot: Sendable, CustomStringConvertible, CustomDebug
         return Self(
             accessToken: credentials.accessToken,
             expiresAt: credentials.expiresAt,
-            nativeDefaultAccountID: credentials.accountId)
+            nativeDefaultAccountID: credentials.accountId,
+            nativeOwnerEmail: CodexNativeCredentialOwnerIdentity.normalizedEmail(
+                fromIDToken: credentials.idToken))
     }
 }
 
@@ -202,6 +205,9 @@ public struct ManagedCodexAccountCredentialResolver: Sendable {
         guard !snapshot.accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return .temporarilyUnavailable(.credentialUnreadable)
         }
+        guard self.isOwnerCompatible(account: first, snapshot: snapshot) else {
+            return .unsupported(.bindingEvidenceInsufficient)
+        }
         guard self.isWorkspaceCompatible(account: first, snapshot: snapshot) else {
             return first.effectiveWorkspaceAccountID == nil
                 ? .unsupported(.bindingEvidenceInsufficient)
@@ -250,6 +256,13 @@ public struct ManagedCodexAccountCredentialResolver: Sendable {
             return nil
         }
         return minimum + self.policy.clockSkew
+    }
+
+    private func isOwnerCompatible(account: ManagedCodexAccount, snapshot: NativeCodexAccessSnapshot) -> Bool {
+        guard let selected = CodexIdentityResolver.normalizeEmail(account.email),
+              let native = snapshot.nativeOwnerEmail
+        else { return false }
+        return selected == native
     }
 
     private func isWorkspaceCompatible(account: ManagedCodexAccount, snapshot: NativeCodexAccessSnapshot) -> Bool {
