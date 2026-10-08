@@ -9,11 +9,7 @@ struct WidgetDateTextTests {
     func `system age format excludes seconds and advances at a minute boundary`() throws {
         guard #available(macOS 15, *) else { return }
         let anchor = Date(timeIntervalSince1970: 1_700_000_000)
-        let style = SystemFormatStyle.DateOffset(
-            to: anchor,
-            allowedFields: [.day, .hour, .minute],
-            maxFieldCount: 2,
-            sign: .never).locale(Locale(identifier: "en_US"))
+        let style = WidgetDateText.ageFormat(anchor).locale(Locale(identifier: "en_US"))
         let now = anchor.addingTimeInterval(5 * 60 + 10)
         #expect(style.format(now) == style.format(now.addingTimeInterval(1)))
         let next = try #require(style.discreteInput(after: now))

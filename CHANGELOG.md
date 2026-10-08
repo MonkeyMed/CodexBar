@@ -13,8 +13,6 @@
 
 ### Fixed
 
-- Widgets: keep freshness labels and reset countdowns live without seconds on macOS 15+, and align quota headlines with the menu layout.
-
 - Codex: ignore commented-out usage endpoint overrides, so disabled proxies cannot shadow active configuration or the default endpoint (#4330). Thanks @lishouxian!
 - Usage & Spend: keep date inspection inside recorded chart buckets, wrap scoped source legends, and retain recorded zero-dollar sources and amounts (#4329). Thanks @Yuxin-Qiao!
 
