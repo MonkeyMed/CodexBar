@@ -536,6 +536,13 @@ the local result and returns a nonzero exit code. See [CLI host reporting](cli.m
 
 ### Usage & Spend session rows
 
+Native Codex sessions with validated completed turns show whole-turn output, median model-first-token latency,
+and median duration below the cost-ranked header. The optional **Performance details** disclosure includes
+sample counts, percentile and cache coverage, and model/effort groups. Timing follows the selected completion
+day; billing keeps its existing request dates and range totals. No timing appears when samples are unavailable.
+Whole-turn output includes reasoning, tools, and waits; first model token can precede visible answer text.
+See the [metric contract and synthetic verification](spend-turn-performance-validation.md).
+
 Projects are grouped by account source and full directory identity, so equal folder names stay separate and
 renaming a project does not split its totals. Project and session rows use saved names from the selected Codex
 home's project metadata, matching each original rollout directory to the longest root on directory boundaries.

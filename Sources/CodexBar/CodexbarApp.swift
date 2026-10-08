@@ -349,7 +349,8 @@ private func makeUpdaterController() -> UpdaterProviding {
 
     if InstallOrigin.isHomebrewCask(appBundleURL: bundleURL) {
         return HomebrewUpdaterController(
-            savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true)
+            savedAutoCheck: (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true,
+            notifier: HomebrewUpdateNotifier(dependencies: .live))
     }
 
     guard isDeveloperIDSigned(bundleURL: bundleURL) else {
@@ -398,6 +399,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var codexAccountPromotionCoordinator: CodexAccountPromotionCoordinator?
     private var cloudSyncCoordinator: CloudSyncCoordinator?
     private var settingsWindowController: SettingsWindowController?
+    private var pendingUpdateSettingsOpen = false
     private lazy var placeholderSettingsWindowGuard = PlaceholderSettingsWindowGuard(
         isKnownSettingsWindow: { [weak self] window in
             self?.settingsWindowController?.window === window
@@ -441,10 +443,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 await self.runProviderLoginFlow(provider)
             })
+        if self.pendingUpdateSettingsOpen {
+            self.pendingUpdateSettingsOpen = false
+            self.openSettings(pane: .about)
+        }
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         MenuBarStatusItemWindowProbe.trace("will-finish-launching")
+        AppNotifications.shared.configureUpdateAction { [weak self] in
+            guard let self else { return }
+            if self.settingsWindowController == nil {
+                self.pendingUpdateSettingsOpen = true
+            } else {
+                self.openSettings(pane: .about)
+            }
+        }
         self.configureAppIconForMacOSVersion()
         // The SwiftUI `Settings` scene is an empty placeholder; macOS otherwise presents it at launch.
         self.placeholderSettingsWindowGuard.start()
