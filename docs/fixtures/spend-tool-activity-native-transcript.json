@@ -1,0 +1,220 @@
+{
+  "artifact": "redacted derivative of actual native accessibility observations",
+  "input": "unmodified frozen copy of an existing native session",
+  "binary_sha256": "aecb6787fe9d88fc98f8bf4e6ecdad6f147d4ffbf4debe02f66ff667db794df3",
+  "code_revision": "7169f322d9998d83fc7dafc38fc4367871146ee8",
+  "credential_access_disabled": true,
+  "production_source_tree": "e6d1c27ec2c9b5dfaca7f15a5a8fe7d90b6c4d15",
+  "redaction": "All private paths, identifiers, commands, arguments, results, dates, durations, counts, usage and cost are omitted or replaced with consistent aliases. Complete originals remain local.",
+  "capture_notes": "Early attempts that did not reach the expected state are excluded: scrolling was needed to instantiate lazy rows, and the privacy notice itself contains the word result. The successful privacy check compares exact field labels and original input/result content.",
+  "checks": [
+    {
+      "action": "native dashboard discovers and indexes the frozen real session",
+      "passed": true,
+      "observations": [
+        {
+          "snapshot": "native-baseline",
+          "AXRole": "AXDisclosureTriangle",
+          "AXDescription": "工具活动"
+        },
+        {
+          "snapshot": "native-baseline",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "0",
+          "AXDescription": "[command-01; private command and timing redacted]"
+        },
+        {
+          "snapshot": "native-baseline",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "0",
+          "AXDescription": "[tool-01; qualified name and timing redacted]"
+        },
+        {
+          "snapshot": "native-baseline",
+          "AXRole": "AXStaticText",
+          "AXValue": "[command-01 input redacted]",
+          "verified": "Visible input equals the original record"
+        }
+      ]
+    },
+    {
+      "action": "command input and result equal the original native record",
+      "passed": true,
+      "observations": [
+        {
+          "snapshot": "command-details",
+          "AXRole": "AXDisclosureTriangle",
+          "AXDescription": "工具活动"
+        },
+        {
+          "snapshot": "command-details",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "1",
+          "AXDescription": "[command-01; private command and timing redacted]"
+        },
+        {
+          "snapshot": "command-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "命令 / 参数"
+        },
+        {
+          "snapshot": "command-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "结果"
+        },
+        {
+          "snapshot": "command-details",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "0",
+          "AXDescription": "[tool-01; qualified name and timing redacted]"
+        },
+        {
+          "snapshot": "command-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "[command-01 input redacted]",
+          "verified": "Visible input equals the original record"
+        },
+        {
+          "snapshot": "command-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "[command-01 result redacted]",
+          "verified": "Visible result equals the original record"
+        }
+      ]
+    },
+    {
+      "action": "MCP input and result JSON equal the original native record",
+      "passed": true,
+      "observations": [
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXDisclosureTriangle",
+          "AXDescription": "工具活动"
+        },
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "0",
+          "AXDescription": "[command-01; private command and timing redacted]"
+        },
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "1",
+          "AXDescription": "[tool-01; qualified name and timing redacted]"
+        },
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "命令 / 参数"
+        },
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "结果"
+        },
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "[tool-01 arguments redacted]",
+          "verified": "Parsed visible JSON equals the original record"
+        },
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "[tool-01 result redacted]",
+          "verified": "Parsed visible JSON equals the original record"
+        },
+        {
+          "snapshot": "mcp-details",
+          "AXRole": "AXStaticText",
+          "AXValue": "[command-01 input redacted]",
+          "verified": "Visible input equals the original record"
+        }
+      ]
+    },
+    {
+      "action": "actual privacy switch masks names and prevents visible detail bodies",
+      "passed": true,
+      "observations": [
+        {
+          "snapshot": "privacy-switch-True",
+          "AXRole": "AXStaticText",
+          "AXValue": "隐藏个人信息"
+        },
+        {
+          "snapshot": "privacy-switch-True",
+          "AXRole": "AXCheckBox",
+          "AXValue": "1",
+          "purpose": "Hide personal info switch"
+        },
+        {
+          "snapshot": "privacy-hidden-expanded",
+          "AXRole": "AXDisclosureTriangle",
+          "AXDescription": "工具活动"
+        },
+        {
+          "snapshot": "privacy-hidden-expanded",
+          "AXRole": "AXStaticText",
+          "AXValue": "MCP 工具"
+        },
+        {
+          "snapshot": "privacy-hidden-expanded",
+          "AXRole": "AXStaticText",
+          "AXValue": "关闭“隐藏个人信息”后可查看命令和结果详情。"
+        }
+      ]
+    },
+    {
+      "action": "turning privacy off restores on-demand MCP details",
+      "passed": true,
+      "observations": [
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXDisclosureTriangle",
+          "AXDescription": "工具活动"
+        },
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "0",
+          "AXDescription": "[command-01; private command and timing redacted]"
+        },
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXDisclosureTriangle",
+          "AXValue": "1",
+          "AXDescription": "[tool-01; qualified name and timing redacted]"
+        },
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXStaticText",
+          "AXValue": "命令 / 参数"
+        },
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXStaticText",
+          "AXValue": "结果"
+        },
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXStaticText",
+          "AXValue": "[tool-01 arguments redacted]",
+          "verified": "Parsed visible JSON equals the original record"
+        },
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXStaticText",
+          "AXValue": "[tool-01 result redacted]",
+          "verified": "Parsed visible JSON equals the original record"
+        },
+        {
+          "snapshot": "privacy-restored",
+          "AXRole": "AXStaticText",
+          "AXValue": "[command-01 input redacted]",
+          "verified": "Visible input equals the original record"
+        }
+      ]
+    }
+  ]
+}

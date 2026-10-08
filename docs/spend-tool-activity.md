@@ -37,6 +37,11 @@ rescanned conservatively. This version does not claim an incremental append inde
 size and modification date are checked before/after reads; stale byte offsets are rejected. There is
 no tool activity work in routine billing refreshes and no new persistent database or dependency.
 
+The scanner's optional session-source descriptor changes the generated parser fingerprint but does
+not change stored billing rows. Databases from current main (`0d8f9504f8e63d0f`) and the stable
+0.73.0 release (`7ff985e81e281a11`) are adopted in place through the existing compatible-predecessor
+mechanism. Retained history, saved pricing, previous reports and scan checkpoints must survive.
+
 Each operation retains a short command preview and record position. Input/result bodies are read only
 when the user expands that operation, bounded to a 4 MiB record and shortened display text. Larger
 records expose a clearly labeled raw record preview. Hide personal info suppresses names/previews and
@@ -74,3 +79,27 @@ outcomes matched the independent structure audit, with no dropped records in tha
 receipts, operation counts, timings, and paths stay in the ignored local proof directory. These
 measurements are from one machine with available filesystem cache and do not establish cold-disk
 timings, whole-app memory use, or coverage across all historical formats.
+
+## Native runtime and upgrade evidence
+
+[Native interaction transcript](fixtures/spend-tool-activity-native-transcript.json) is a redacted
+derivative of actual macOS accessibility observations from the packaged app, reading a byte-for-byte
+frozen copy of an existing native Codex session. No synthetic operations were added to that input.
+The app has an isolated bundle identifier and test profile, with account refresh and Keychain access
+disabled. The production dashboard, scanner, tool index, detail reader and privacy switch are used.
+
+The transcript records five successful checks: discover the real session, expand a command and compare
+its input/result with the source, compare MCP input/result JSON with the source, enable Hide personal
+info and inspect the masked details, then disable it and inspect the restored details. Private paths,
+identifiers, commands, arguments, results, dates, durations, operation counts, usage and cost are
+omitted or consistently aliased. Complete originals remain local. The artifact identifies the code
+revision, production Sources tree and packaged executable hash; later documentation changes do not
+alter that Sources tree. Early automation attempts that failed to reach the expected state are excluded.
+These short checks do not establish long-term stability or cover every native client schema.
+
+[Store upgrade regression receipt](fixtures/spend-tool-activity-upgrade-proof.json) uses entirely
+synthetic billing data. The new preservation test fails against the pre-fix implementation for the
+current-main fingerprint and passes after compatibility adoption is added. Both current-main and
+stable stores retain typed saved-pricing rows, ledger state and checkpoints across two opens after
+the original log is removed, with unchanged database identity and zero rebuilds. Existing regressions
+also cover previous report payloads, unfinished-line resume state and zero session-head reparses.
