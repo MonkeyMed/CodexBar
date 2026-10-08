@@ -22,6 +22,7 @@
 
 ### Fixed
 
+- Linux: read procfs `children` files without Foundation when tearing down child process trees, so a long-running `codexbar serve` no longer leaks 4 KB per empty file read.
 - Usage & Spend: reduce annual token activity update work by reusing calendar dates, coverage, and localized date formatters without changing chart output (#4328). Thanks @Yuxin-Qiao!
 - Notion AI: recover usage for a configured workspace when large workspace/member lists exceed the plugin response limit, and explain how to configure a workspace when needed (#4341). Thanks @optemism!
 - Codex: ignore commented-out usage endpoint overrides, so disabled proxies cannot shadow active configuration or the default endpoint (#4330). Thanks @lishouxian!
