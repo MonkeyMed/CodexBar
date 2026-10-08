@@ -325,6 +325,113 @@ struct SessionToolActivityTests {
         await #expect(throws: CancellationError.self) { try await task.value }
     }
 
+    @Test
+    func `combining scalars and multibyte text remain byte bounded and valid UTF8`() async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let giant = "e" + String(repeating: "\u{301}", count: 100_000)
+        let command = "e" + String(repeating: "\u{301}", count: 3000)
+        try fixture.write([Self.record(id: "unicode", type: "CommandExecution", extra: [
+            "command": [command], "aggregated_output": giant, "exit_code": 0,
+        ])])
+        let store = SessionToolActivityStore()
+        let snapshot = try await store.load(source: fixture.source)
+        let operation = try #require(snapshot.operations.first)
+        #expect(try #require(operation.preview).utf8.count <= 640)
+        let details = try await store.details(operation: operation, snapshot: snapshot)
+        let output = try #require(details.output)
+        #expect(output.utf8.count <= 128_000)
+        #expect(details.isTruncated)
+        #expect(giant.utf8.starts(with: output.utf8))
+        #expect(SessionToolTextPreview.prefix("你好🙂", characters: 10, bytes: 8) == "你好")
+        #expect(SessionToolTextPreview.prefix("🙂", characters: 10, bytes: 3).isEmpty)
+    }
+
+    @Test
+    func `oversized identities are unindexed and display names have byte limits`() async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        var longTurn = Self.record(id: "turn", type: "CommandExecution")
+        var payload = try #require(longTurn["payload"] as? [String: Any])
+        payload["turn_id"] = String(repeating: "t", count: 257)
+        longTurn["payload"] = payload
+        try fixture.write([
+            Self.record(id: String(repeating: "i", count: 257), type: "CommandExecution"),
+            longTurn,
+            Self.record(id: "name", type: "McpToolCall", extra: [
+                "server": String(repeating: "e\u{301}", count: 1000), "tool": "read",
+            ]),
+        ])
+        let snapshot = try await SessionToolActivityStore().load(source: fixture.source)
+        #expect(snapshot.operations.count == 1)
+        #expect(snapshot.operations.first?.name.utf8.count ?? Int.max <= 1024)
+        #expect(snapshot.ignoredRecordCount == 2 && snapshot.isPartial)
+    }
+
+    @Test
+    func `multiple large sessions obey one cache operation budget`() async throws {
+        let store = SessionToolActivityStore()
+        var fixtures: [Fixture] = []
+        defer { fixtures.forEach { $0.remove() } }
+        for index in 0..<3 {
+            let fixture = try Fixture()
+            fixtures.append(fixture)
+            try fixture.write((0..<8000).map {
+                Self.record(id: "\(index)-\($0)", type: "CommandExecution", extra: ["exit_code": 0])
+            })
+            let snapshot = try await store.load(source: fixture.source)
+            #expect(snapshot.operations.count == 8000 && !snapshot.isPartial)
+            #expect(await store.cachedOperationCount <= SessionToolActivityStore.maximumCachedOperations)
+        }
+        #expect(await store.cachedOperationCount == 16000)
+        #expect(try await store.load(source: fixtures[0].source).operations.count == 8000)
+        #expect(await store.cachedOperationCount == 16000)
+    }
+
+    @Test
+    func `operation cap reports partial coverage and still allows indexed details`() async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        try fixture.write((0...SessionToolActivityStore.maximumOperations).map {
+            Self.record(id: "\($0)", type: "CommandExecution", extra: [
+                "aggregated_output": "result \($0)", "exit_code": 0,
+            ])
+        })
+        let store = SessionToolActivityStore()
+        let snapshot = try await store.load(source: fixture.source)
+        #expect(snapshot.operations.count == SessionToolActivityStore.maximumOperations)
+        #expect(snapshot.isPartial)
+        let operation = try #require(snapshot.operations.first)
+        #expect(try await store.details(operation: operation, snapshot: snapshot).output ==
+            "result \(operation.id.itemID)")
+    }
+
+    @Test
+    func `repeated rewrites and cancelled detail reads never return stale bodies`() async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let store = SessionToolActivityStore()
+        for index in 0..<50 {
+            try fixture.write([Self.record(id: "same", type: "CommandExecution", extra: [
+                "aggregated_output": "generation \(index)", "exit_code": 0,
+            ])])
+            let snapshot = try await store.load(source: fixture.source)
+            let operation = try #require(snapshot.operations.first)
+            #expect(try await store.details(operation: operation, snapshot: snapshot).output == "generation \(index)")
+            let cancelled = Task {
+                withUnsafeCurrentTask { $0?.cancel() }
+                return try await store.details(operation: operation, snapshot: snapshot)
+            }
+            await #expect(throws: CancellationError.self) { try await cancelled.value }
+            try fixture.write([Self.record(id: "same", type: "CommandExecution", extra: [
+                "aggregated_output": "replacement \(index)", "exit_code": 0,
+            ])])
+            await #expect(throws: SessionToolActivityError.sourceChanged) {
+                try await store.details(operation: operation, snapshot: snapshot)
+            }
+        }
+    }
+
     private static func record(
         id: String,
         type: String,

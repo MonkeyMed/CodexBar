@@ -32,8 +32,9 @@ follow multi-megabyte output. Metadata projection is capped at 128 KiB, retained
 nesting at 64, a scan at 256 MiB, and operations at 20,000. Incomplete tails, malformed records, missing
 native identities/timestamps, and reached limits produce a partial-coverage notice.
 
-Four source snapshots are cached only in memory. Unchanged files reuse the cache; changed files are
-rescanned conservatively. This version does not claim an incremental append index. File identity,
+At most four source snapshots and 20,000 operations in total are cached only in memory. Unchanged files
+reuse the cache; changed files are rescanned conservatively. This version does not claim an incremental
+append index. File identity,
 size and modification date are checked before/after reads; stale byte offsets are rejected. There is
 no tool activity work in routine billing refreshes and no new persistent database or dependency.
 
@@ -47,6 +48,17 @@ when the user expands that operation, bounded to a 4 MiB record and shortened di
 records expose a clearly labeled raw record preview. Hide personal info suppresses names/previews and
 disables body reads. Existing spend JSON exports do not include rollout paths or tool bodies. No
 credentials, provider calls, tracing configuration, or execution of recorded commands is required.
+
+Retained turn/item identities are limited to 256 UTF-8 bytes; oversized identities are excluded and
+mark coverage partial. Names and command previews have both character and byte limits. Detail text is
+limited to 16,000 characters / 64,000 UTF-8 bytes for inputs and 32,000 characters / 128,000 bytes for
+results, whichever is reached first. Large structured results use compact JSON to limit indentation
+growth. UTF-8 prefixes end on valid scalar boundaries; shortened detail text is explicitly marked.
+
+Detail presentation is keyed by the operation and source file identity, size and modification date.
+An older body's display is suppressed immediately when the key changes, before the next asynchronous
+load starts. Superseded reads cannot replace a newer result or error state. Collapsed and privacy-hidden
+details release their bodies; cancelled reads do not publish a changed-file warning.
 
 The section deliberately describes operations in the selected local log, not a guaranteed whole-session
 history. Older clients may have no native operation records. Cross-session rankings/trends, full call

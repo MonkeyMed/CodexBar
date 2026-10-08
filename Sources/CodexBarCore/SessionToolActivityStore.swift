@@ -7,6 +7,11 @@ public actor SessionToolActivityStore {
     private var recentSources: [SessionToolActivitySource] = []
     static let maximumScanBytes: UInt64 = 256 * 1024 * 1024
     static let maximumOperations = 20000
+    static let maximumCachedOperations = 20000
+
+    var cachedOperationCount: Int {
+        self.cache.values.reduce(0) { $0 + $1.operations.count }
+    }
 
     public init() {}
 
@@ -22,7 +27,7 @@ public actor SessionToolActivityStore {
         self.cache[source] = snapshot
         self.recentSources.removeAll { $0 == source }
         self.recentSources.append(source)
-        while self.recentSources.count > 4 {
+        while self.recentSources.count > 4 || self.cachedOperationCount > Self.maximumCachedOperations {
             self.cache.removeValue(forKey: self.recentSources.removeFirst())
         }
         return snapshot
@@ -40,9 +45,16 @@ public actor SessionToolActivityStore {
         try handle.seek(toOffset: operation.recordOffset)
         // Oversized records remain inspectable as a labeled preview; never allocate an unbounded result.
         let limit = 4 * 1024 * 1024
+        guard operation.recordLength > 0, operation.recordOffset <= snapshot.fileSize,
+              UInt64(operation.recordLength) <= snapshot.fileSize - operation.recordOffset
+        else {
+            throw SessionToolActivityError.sourceChanged
+        }
         let bytes = try handle.read(upToCount: min(operation.recordLength, limit)) ?? Data()
         try Task.checkCancellation()
-        guard try Self.matches(snapshot, Self.stamp(snapshot.source.fileURL)) else {
+        guard bytes.count == min(operation.recordLength, limit),
+              try Self.matches(snapshot, Self.stamp(snapshot.source.fileURL))
+        else {
             throw SessionToolActivityError.sourceChanged
         }
         if operation.recordLength > limit {
@@ -55,16 +67,25 @@ public actor SessionToolActivityStore {
                 outputIsRawRecord: true)
         }
         guard let root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any],
-              let payload = root["payload"] as? [String: Any], let item = payload["item"] as? [String: Any]
+              let payload = root["payload"] as? [String: Any], let item = payload["item"] as? [String: Any],
+              let recorded = SessionToolActivityParser.operation(
+                  from: root,
+                  source: snapshot.source,
+                  offset: operation.recordOffset,
+                  length: operation.recordLength),
+              recorded.id == operation.id, recorded.kind == operation.kind
         else { throw SessionToolActivityError.unavailable }
         let inputText = ["command", "arguments", "changes"].lazy.compactMap { Self.text(item[$0]) }.first
         let outputText = ["aggregated_output", "result", "content_items", "error", "formatted_output"].lazy
             .compactMap { Self.text(item[$0]) }.first
             ?? ["stdout", "stderr"].compactMap { Self.text(item[$0]) }.joined(separator: "\n")
+        let input = inputText.map { SessionToolTextPreview.prefix($0, characters: 16000, bytes: 64000) }
+        let output = SessionToolTextPreview.prefix(outputText, characters: 32000, bytes: 128_000)
+        try Task.checkCancellation()
         return SessionToolOperationDetails(
-            input: inputText.map { String($0.prefix(16000)) },
-            output: outputText.isEmpty ? nil : String(outputText.prefix(32000)),
-            isTruncated: (inputText?.count ?? 0) > 16000 || outputText.count > 32000)
+            input: input,
+            output: output.isEmpty ? nil : output,
+            isTruncated: input != inputText || output != outputText)
     }
 
     private static func text(_ value: Any?) -> String? {
@@ -72,8 +93,14 @@ public actor SessionToolActivityStore {
         if let text = value as? String { return text.isEmpty ? nil : text }
         if let command = value as? [String] { return command.joined(separator: " ") }
         guard JSONSerialization.isValidJSONObject(value),
-              let bytes = try? JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys])
+              var bytes = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys])
         else { return nil }
+        // Pretty-print small structures only; indentation can greatly amplify a deeply nested result.
+        if bytes.count <= 64000,
+           let formatted = try? JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys])
+        {
+            bytes = formatted
+        }
         return String(data: bytes, encoding: .utf8)
     }
 

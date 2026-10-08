@@ -34,7 +34,7 @@ struct SpendSessionToolActivityView: View {
                     ProgressView(L("spend_tools_loading")).controlSize(.small)
                 } else if self.error {
                     Text(L("spend_tools_unavailable")).foregroundStyle(.secondary)
-                } else if let snapshot = self.snapshot {
+                } else if let snapshot = self.snapshot, snapshot.source == self.source {
                     SpendToolActivityContent(
                         snapshot: snapshot,
                         range: self.range,
@@ -62,7 +62,13 @@ struct SpendSessionToolActivityView: View {
         .task(id: LoadKey(
             source: self.source, activity: self.lastActivity, expanded: self.expanded, revision: self.revision))
         {
-            guard self.expanded else { return }
+            guard !Task.isCancelled else { return }
+            guard self.expanded else {
+                self.snapshot = nil
+                self.loading = false
+                self.error = false
+                return
+            }
             self.loading = true
             self.error = false
             do {
@@ -198,16 +204,17 @@ struct SpendToolOperationRow: View {
     let hidePersonalInfo: Bool
     let timeZone: TimeZone
     @State private var expanded = false
-    @State private var details: SessionToolOperationDetails?
-    @State private var error = false
+    @State private var detailsModel = SpendToolDetailsModel()
 
-    private struct DetailsKey: Equatable {
-        let expanded: Bool
-        let hidden: Bool
-        let source: SessionToolActivitySource
-        let modified: Date
-        let size: UInt64
-        let fileNumber: UInt64
+    private var detailsKey: SpendToolDetailsKey {
+        SpendToolDetailsKey(
+            operation: self.operation,
+            source: self.snapshot.source,
+            modified: self.snapshot.modificationDate,
+            size: self.snapshot.fileSize,
+            fileNumber: self.snapshot.fileNumber,
+            expanded: self.expanded,
+            hidden: self.hidePersonalInfo)
     }
 
     var body: some View {
@@ -215,9 +222,9 @@ struct SpendToolOperationRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 if self.hidePersonalInfo {
                     Text(L("spend_tools_hidden")).foregroundStyle(.secondary)
-                } else if self.error {
+                } else if self.detailsModel.failed(for: self.detailsKey) {
                     Text(L("spend_tools_changed")).foregroundStyle(.secondary)
-                } else if let details = self.details {
+                } else if let details = self.detailsModel.details(for: self.detailsKey) {
                     if let input = details.input { self.detailText("spend_tools_input", value: input) }
                     if let output = details.output {
                         self.detailText(
@@ -262,25 +269,10 @@ struct SpendToolOperationRow: View {
         }
         .padding(8)
         .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
-        .task(id: DetailsKey(
-            expanded: self.expanded,
-            hidden: self.hidePersonalInfo,
-            source: self.snapshot.source,
-            modified: self.snapshot.modificationDate,
-            size: self.snapshot.fileSize,
-            fileNumber: self.snapshot.fileNumber))
-        {
-            guard self.expanded, !self.hidePersonalInfo else { return }
-            self.error = false
-            self.details = nil
-            do {
-                let details = try await SessionToolActivityStore.shared.details(
+        .task(id: self.detailsKey) {
+            await self.detailsModel.load(key: self.detailsKey) {
+                try await SessionToolActivityStore.shared.details(
                     operation: self.operation, snapshot: self.snapshot)
-                guard !Task.isCancelled else { return }
-                self.details = details
-            } catch {
-                guard !Task.isCancelled else { return }
-                self.error = true
             }
         }
     }
