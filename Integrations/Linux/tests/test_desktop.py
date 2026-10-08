@@ -38,7 +38,7 @@ if args[0]=='cost':
 else:
  usage=state.get('usage',{'identity':{'accountEmail':'private@example.com'},
  'primary':{'usedPercent':40,'windowMinutes':300,'resetsAt':'2030-01-01T00:00:00Z'}})
- print(json.dumps([{'provider':provider,'usage':usage,'rateWindowLabels':state.get('rateWindowLabels')}]))
+ print(json.dumps([{'provider':provider,'usage':usage,'rateWindowLabels':state.get('rateWindowLabels'),'pace':state.get('pace'),'resetCredits':state.get('resetCredits'),'status':state.get('status')}]))
 ''')
         self.fake.chmod(0o755)
         self.log = (self.root / 'desktop.log').open('w+')
@@ -171,6 +171,60 @@ else:
         self.assertEqual(windows[0]['label'], 'Rate limit')
         self.assertEqual(windows[0]['remaining'], 80)
 
+    def test_panel_details_reach_snapshot_without_identity(self):
+        (self.root / 'state.json').write_text(json.dumps({
+            'usage': {'identity': {'accountEmail': 'private@example.com', 'loginMethod': 'Max'},
+                      'primary': {'usedPercent': 25, 'windowMinutes': 300},
+                      'providerCost': {'period': 'Extra usage', 'currencyCode': 'Credits', 'balance': 500, 'used': 0},
+                      # The CLI owns expiry/status filtering. Raw credit IDs must never reach IPC.
+                      'codexResetCredits': {'availableCount': 99, 'credits': [
+                          {'id': 'private-credit-id', 'status': 'available', 'expires_at': '2030-01-01T05:00:00Z'},
+                          {'id': 'private-credit-id', 'status': 'available', 'expires_at': '2030-01-01T09:00:00+09:00'},
+                          {'id': 'private-credit-id', 'status': 'available', 'expires_at': '2020-01-01T00:00:00Z'},
+                          {'id': 'private-credit-id', 'status': 'redeemed', 'expires_at': '2030-01-01T00:00:00Z'},
+                          {'id': 'private-credit-id', 'status': 'available'}]}},
+            'resetCredits': {'available': 3, 'nextExpiresAt': '2030-01-01T00:00:00Z'},
+            'pace': {'primary': {'summary': 'On pace', 'expectedUsedPercent': 30}}
+        }))
+        self.client('--configure', '{"provider":"claude"}')
+        value = self.wait_for(lambda value: value.get('entries') and not value['busy']
+                              and value['entries'][0].get('plan') == 'Max')
+        entry = value['entries'][0]
+        self.assertEqual(entry['windows'][0]['paceExpected'], 30)
+        self.assertEqual(entry['extraUsage']['balance'], 500)
+        self.assertEqual(entry['resetCredits'], {'available': 3, 'nextExpiresAt': '2030-01-01T00:00:00Z'})
+        self.assertNotIn('private-credit-id', json.dumps(value))
+        self.assertEqual(value['spending'], [])
+        self.assertNotIn('private@example.com', json.dumps(value))
+        self.client('--snapshot', '--with-spending')
+        value = self.wait_for(lambda value: bool(value.get('spending')))
+        self.assertEqual(value['spending'][0]['month'], 12)
+
+    def test_snapshot_redacts_provider_labels_even_when_identity_is_visible(self):
+        (self.root / 'state.json').write_text(json.dumps({
+            'usage': {'identity': {'loginMethod': 'Max private@example.com'},
+                      'primary': {'usedPercent': 25, 'windowMinutes': 300}},
+            'status': {'description': 'Incident for private@example.com', 'indicator': 'minor'}
+        }))
+        self.client('--configure', '{"provider":"claude","showIdentity":true}')
+        value = self.wait_for(lambda value: value.get('entries') and not value['busy']
+                              and value['entries'][0].get('statusLevel') == 'minor')
+        self.assertEqual(value['entries'][0]['plan'], 'Max [hidden email]')
+        self.assertEqual(value['entries'][0]['status'], 'Incident for [hidden email]')
+        self.assertNotIn('private@example.com', json.dumps(value))
+
+    def test_spending_snapshot_recovers_after_failed_scan(self):
+        state = self.root / 'state.json'
+        state.write_text('{"failProvider":"both"}')
+        self.client('--snapshot', '--with-spending')
+        self.wait_for(lambda value: bool(value.get('costError')) and not value['costBusy'])
+        state.unlink()
+        time.sleep(5.2)
+        self.client('--snapshot', '--with-spending')
+        value = self.wait_for(lambda value: bool(value.get('spending')) and not value['costBusy'])
+        self.assertEqual(value['costError'], '')
+        self.assertEqual(value['spending'][0]['month'], 12)
+
     def test_invalid_config_is_not_overwritten(self):
         self.client('--quit')
         self.process.wait(timeout=4)
@@ -199,31 +253,29 @@ else:
         self.assertTrue(value['stale'])
         self.assertEqual(value['summary'], 'CX 60%')
 
-    def test_quick_view_is_explicit_and_scans_cost_only_when_opened(self):
+    def test_quick_view_is_opt_in_and_never_scans_cost_on_open(self):
         calls = self.root / 'calls.jsonl'
-        self.assertFalse((self.root / 'config/codexbar/linux.json').exists())
-        self.client('--usage')
+        self.client('--configure', '{}')
+        settings = self.root / 'config/codexbar/linux.json'
+        self.assertFalse(json.loads(settings.read_text())['compactQuickView'])
+        for enabled in [False, True]:
+            self.client('--configure', json.dumps({'compactQuickView': enabled}))
+            self.assertEqual(json.loads(settings.read_text())['compactQuickView'], enabled)
+            for command in ['--usage', '--quick-view']:
+                self.client(command)
+                snapshot = self.client('--snapshot')
+                self.assertFalse(snapshot['costBusy'])
+                self.assertEqual(snapshot['costProviders'], 0)
         self.assertEqual([json.loads(line)['args'][0] for line in calls.read_text().splitlines()], ['usage'])
+        self.client('--configure', '{"refreshOnOpen":true}')
         self.client('--quick-view')
-        self.wait_for(lambda value: value.get('costProviders') == 1 and not value['costBusy'])
+        self.wait_for(lambda value: not value['busy'] and len(calls.read_text().splitlines()) >= 2)
         self.assertEqual([json.loads(line)['args'][0] for line in calls.read_text().splitlines()],
-                         ['usage', 'cost'])
-        self.client('--configure', '{"compactQuickView":true,"refreshOnOpen":true}')
-        self.assertTrue(json.loads((self.root / 'config/codexbar/linux.json').read_text())['compactQuickView'])
-        self.client('--configure', '{"showCosts":false}')
-        self.client('--configure', '{"showCosts":true}')
-        self.wait_for(lambda value: bool(value.get('entries')) and not value['busy'])
-        previous = len(calls.read_text().splitlines())
-        self.client('--usage')
-        end = time.monotonic() + 4
-        while len(calls.read_text().splitlines()) == previous and time.monotonic() < end:
-            time.sleep(0.05)
-        self.assertEqual(len(calls.read_text().splitlines()), previous + 1)
-        self.assertEqual(json.loads(calls.read_text().splitlines()[-1])['args'][0], 'usage')
-        self.assertNotIn('cost', [json.loads(line)['args'][0] for line in calls.read_text().splitlines()[previous:]])
+                         ['usage', 'usage'])
+        self.client('--spending')
+        self.wait_for(lambda value: value['costProviders'] == 1 and not value['costBusy'])
         self.client('--quick-view')
-        self.wait_for(lambda value: value.get('costProviders') == 1 and not value['costBusy'])
-        self.assertIn('cost', [json.loads(line)['args'][0] for line in calls.read_text().splitlines()[previous + 1:]])
+        self.assertEqual([json.loads(line)['args'][0] for line in calls.read_text().splitlines()].count('cost'), 1)
 
     def test_failed_spending_preserves_previous_scan(self):
         self.client('--spending')

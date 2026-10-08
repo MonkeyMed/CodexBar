@@ -8,7 +8,7 @@ read_when:
 
 # Providers
 
-CodexBar currently registers 84 provider IDs. Some companies expose multiple surfaces, such as Codex vs OpenAI API or
+CodexBar currently registers 92 provider IDs. Some companies expose multiple surfaces, such as Codex vs OpenAI API or
 OpenCode vs OpenCode Go, because the auth source and quota shape differ.
 
 ## Fetch strategies (current)
@@ -22,6 +22,9 @@ New installs use `~/.config/codexbar/config.json`; existing `~/.codexbar/config.
 See [CLI configuration](cli-configuration.md) for `XDG_CONFIG_HOME` and `CODEXBAR_CONFIG` overrides.
 
 ## Usage & Spend settings
+
+The Statistics time zone picker changes the saved reporting zone. Use Mac's current time zone pins the Mac's
+current zone once; later system timezone changes do not override the saved selection.
 
 Settings → Usage & Spend is a local estimated-cost history page, not a billing receipt and not the menu-bar quota
 card. Range choices are 7 / 30 / 90 days and All (the scan window is 365 days). Amounts are list-price equivalents
@@ -45,6 +48,9 @@ sessions, Codex projects, and a 365-day token heatmap. A heatmap day with no cov
 and is not clickable. Custom list-price overlays are documented in `docs/model-pricing.md`.
 Cached and combined reports retain token-class details and known request counts. Coverage is combined from each
 source's existing classification, so a priced source cannot hide another source's unpriced or unmetered rows.
+The daily ledger retains known request counts when another source cannot count requests and marks that subtotal
+with `≥`. If every source omits its request count, the ledger shows a dash. Request-count gaps do not make known
+token or cost totals partial, and partial cost estimates do not erase known request counts.
 If coverage totals cannot fit, aggregation falls back to existing request or daily-row inference without changing costs or stored data.
 Token sums that exceed the supported integer range remain unavailable for that aggregation pass; later rows do not
 restore a partial count. Other token classes, pricing, and explicit totals retain their existing meaning. Materialized
@@ -56,6 +62,9 @@ double-count the same traffic. An optional toggle can hide native Codex while Op
 emits the currently aggregated model (provenance, mix, coverage). Invalid numeric fields are omitted while valid
 neighboring fields remain available. Existing cached rows are reparsed once after the numeric parser update;
 subsequent unchanged reads continue to reuse the corrected cache.
+Rows explicitly billed to `nous` appear under Nous Portal with OpenCodex provenance, even when their model IDs
+name another vendor. Their dollar amounts are estimates from exact Nous/model pricing, never Portal credits or
+the producer's ignored `_meta` values; missing rates stay unpriced. See [Nous local usage and spend](nous.md#local-usage-and-spend).
 
 The view stays local and does not upload usage history. Refreshes retain the last successful model if a replacement
 scan fails, while provider/account configuration changes replace obsolete results. Coverage text reports how many
@@ -94,11 +103,13 @@ complete when the available scan window covers fewer days.
 | Warp | API token (config/env) → GraphQL request limits (`api`). |
 | ElevenLabs | API key from config/env → subscription usage API (`api`). |
 | [Nous Portal](nous.md) | Read-only Hermes login or explicit access token → bundled plugin for monthly credits and top-up balances (`api`). |
-| [Muse Code](muse.md) | Existing CLI device-code login → bundled plugin for reported five-hour and weekly subscription quotas (`oauth`). |
+| [Muse Code](muse.md) | Existing CLI device-code login → bundled plugin for reported five-hour and weekly subscription quotas (`oauth`); opt-in `dev.meta.ai` browser-team quota for a user-selected team when the login response omits them (`oauth+web`). |
+| [Muse (muse.ai)](museai.md) | Browser cookies for `muse.ai` or a manual Cookie header → bundled plugin for the muse.ai weekly Free/Power/Maximum allowance (`web`). |
 | [CodeRabbit](coderabbit.md) | One bounded local CLI usage report for review counts and billing state (`cli`); no quota or balance is inferred. |
 | [Replicate](replicate.md) | Native Chrome cookie candidates or a manual header → bundled plugin for monthly spend and optional prepaid credits (`web`). |
 | [TypeSafe](typesafe.md) | Chrome cookies or a manual header → bundled plugin for billing spend and credit balance (`web`). |
 | [Hugging Face](huggingface.md) | Access token from settings/env/CLI → bundled plugin for Inference Providers charges, optional ZeroGPU quota, and token-scoped identity (`api`). |
+| [Raycast](raycast.md) | Chrome cookies for `www.raycast.com` or a manual Cookie header → bundled plugin for monthly AI credits (`web`). |
 | [v0](v0.md) | API key and optional project scope from settings/env → bundled plugin for Platform API billing and rate limits (`api`). |
 | [DevPass](devpass.md) | Regular LLM Gateway API key → bundled plugin for plan credits, premium weekly usage, and all-time key spend (`api`). |
 | [Atlas Cloud](atlascloud.md) | Standard API key → account-wide available USD balance (`api`). |
@@ -106,6 +117,7 @@ complete when the available scan window covers fewer days.
 | Windsurf | Web session bundle from browser localStorage (`web`) → local SQLite cache (`local`). |
 | Ollama | API key verifies Cloud API access (`api`); browser cookies expose Cloud quota windows (`web`). |
 | [llmman](llmman.md) | Local `llmman serve` node report, optional API key → bundled plugin for loaded-model memory and store summary (`api`). |
+| [xKiro](xkiro.md) | API key → bundled plugin for account-wide daily free tokens and the midnight UTC reset (`api`). |
 | Synthetic | API key from config/env → quota API (`api`). |
 | OpenRouter | API token (config, overrides env) → key quota and credits APIs; a management key enables account Activity on the official API (`api`). |
 | Perplexity | Browser cookies/manual cookie/env session token → credits API (`web`). |
@@ -122,7 +134,7 @@ complete when the available scan window covers fewer days.
 | Codebuff | API token from config/env or `codebuff login` credentials → usage API (`api`). |
 | Venice | Auto/API: API key from config/env → DIEM/USD balance (`api`). Explicit Web: Chrome or manual cookies → subscription credit details (`web`). |
 | Command Code | Web billing API via Command Code session cookies (`web`). |
-| ClinePass | API key from config/env → 5-hour, weekly, and monthly subscription usage limits (`api`). |
+| ClinePass | API key from config/env or labeled API-key accounts, then the existing `cline auth` session file → 5-hour, weekly, and monthly subscription usage limits (`api`). |
 | Qoder | Browser or manual cookies → big model credit usage (`web`). |
 | StepFun | Username/password login or manual Oasis token (`web`). |
 | AWS Bedrock | AWS credentials → Cost Explorer spend/budgets and optional CloudWatch Claude activity (`api`). |
@@ -135,6 +147,7 @@ complete when the available scan window covers fewer days.
 | Wayfinder | Local gateway URL → `/healthz`, `/v1/savings`, `/router/models`, `/metrics` for health, routing split, savings, and decision latency (`api`). |
 | LiteLLM | API key + base URL → `/key/info`, then `/user/info` or `/team/info` budget usage (`api`). |
 | Bifrost | Virtual key + base URL → `/api/governance/virtual-keys/quota` budget and rate-limit usage (`api`). |
+| Aixy | Project API key + optional base URL → `/v1/usage` key usage and applicable budgets (`api`). |
 | Deepgram | API key → project discovery and usage breakdown API (`api`). |
 | Poe | API key → current point balance and best-effort points history (`api`). |
 | Chutes | API key from config/env → subscription usage and quota API (`api`). |
@@ -147,10 +160,20 @@ complete when the available scan window covers fewer days.
 | Notion AI | Browser cookies → workspace resolution and the AI usage allowance API (`web`). |
 | [IBM Bob](ibm-bob.md) | API key from config/env → profile and per-team Bobcoin budget APIs (`api`). |
 | [Pi](pi.md) | Local Pi/OMP assistant transcripts → token history and API-rate cost estimates (`local`); no subscription quota. |
+<!-- Generated provider additions: Scripts/regenerate-provider-docs.mjs -->
+
+| Provider | Source |
+|---|---|
+| [Langdock](langdock.md) | Selected Microsoft Edge profile → personal included session and weekly limits (`web`, macOS). |
+| [X API](xapi.md) | Chrome or manual console.x.com cookies for prepaid and free credits, including negative balances. |
+| [LithosAI](lithosai.md) | Chrome or manual console cookies for prepaid USD balance and optional UTC spend. |
+| [WorkBuddy](workbuddy.md) | Chrome or manual www.workbuddy.cn cookies for the monthly credits allowance, plan name, and cycle reset. |
+
+<!-- End generated provider additions -->
 
 ## Codex
 - App Auto: OAuth API first; falls back to CLI only when OAuth credentials are missing or auth/refresh is invalid.
-- Web dashboard (optional, off by default): `https://chatgpt.com/codex/settings/usage` via WebView + browser cookies.
+- Web dashboard (optional, off by default): `https://chatgpt.com/codex/cloud/settings/analytics#usage` via WebView + browser cookies.
 - Battery saver toggle (currently off by default): reduces routine OpenAI web refreshes but still allows explicit manual refreshes.
 - CLI RPC default: `codex ... app-server` JSON-RPC (`account/read`, `account/rateLimits/read`).
 - CLI PTY: manual diagnostics/parser coverage only; automatic refresh does not launch bare Codex TUI.
@@ -545,9 +568,12 @@ provider-specific cookie validation, endpoints, login detection, and error trans
 
 ## ClinePass
 
+Cline's existing browser sign-in session is reused read-only when no API key is configured. CodexBar does not copy or
+refresh the token; renew an expired session with `cline auth`. See the path overrides in [ClinePass setup](clinepass.md).
+
 ClinePass usage is fetched by the bundled TypeScript plugin on macOS and Linux; QuickJS is the default engine and
 JavaScriptCore is the macOS rollback engine. The committed `.js` is generated from `clinepass.ts`.
-- API key from `~/.codexbar/config.json`, `CLINE_API_KEY`, or `CLINEPASS_API_KEY`.
+- Selected labeled API-key account, otherwise an API key from `~/.codexbar/config.json`, `CLINE_API_KEY`, or `CLINEPASS_API_KEY`; a rejected selected key never falls back to another credential.
 - Reads 5-hour, weekly, and monthly usage limits from `GET https://api.cline.bot/api/v1/users/me/plan/usage-limits`.
 - ClinePass subscription limits are distinct from Cline pay-as-you-go balance and usage.
 - Status: none yet.
@@ -631,6 +657,12 @@ JavaScriptCore is the macOS rollback engine. The committed `.js` is generated fr
 - Spend remains visible in the API-spend row when LiteLLM has no budget limit configured.
 - Accepts base URLs with or without a `/v1` suffix; management requests are sent to the proxy root.
 - Details: `docs/litellm.md`.
+
+## Aixy
+- API key from config or `AIXY_API_KEY`; optional `enterpriseHost` / `AIXY_BASE_URL` defaults to the hosted Aixy gateway.
+- Reads key-scoped seven-day usage and applicable budget aggregates; no browser session or administrator credential.
+- Separates shared/personal limits, hard reservations, recorded spend, and unknown balances; overlapping budgets are not added together.
+- Details: `docs/aixy.md`.
 
 ## Bifrost
 - Virtual key from config or `BIFROST_API_KEY`; base URL from config `enterpriseHost` or `BIFROST_BASE_URL` (required).

@@ -1,9 +1,30 @@
 import Foundation
+import SweetCookieKit
 import Testing
 @testable import CodexBarCore
 
 struct ProviderPluginCookieBrokerTests {
     private let domains: Set<String> = ["cloud.example.test", "community.example.test"]
+
+    @Test
+    func `denied batches retain later sessions and do not replace API failures`() throws {
+        try self.isolated {
+            let broker = ProviderPluginCookieBroker(
+                provider: .manus,
+                domains: self.domains,
+                settings: .init(cookieSource: .auto, manualCookieHeader: nil),
+                batches: { _, batch in
+                    if batch == 0 {
+                        throw BrowserCookieError.accessDenied(browser: .safari, details: "Synthetic denial")
+                    }
+                    return batch == 1 ? [("session=fallback", "Fixture")] : nil
+                })
+            let session = try #require(try broker.nextSession(domain: "cloud.example.test"))
+            #expect(session.header == "session=fallback")
+            let apiError = ProviderFetchClassifiedError(kind: .apiFailure, message: "Synthetic server failure")
+            #expect((broker.preferredFailure(over: apiError) as? ProviderFetchClassifiedError)?.kind == .apiFailure)
+        }
+    }
 
     @Test
     func `China manual capture is never issued for global domain`() throws {
@@ -237,6 +258,78 @@ struct ProviderPluginCookieBrokerTests {
         #endif
     }
 
+    #if os(macOS)
+    @Test(arguments: [false, true])
+    func `exact host cookie wins over parent without accepting sibling or lookalike hosts`(reversed: Bool) throws {
+        let rows = [
+            (".example.test", "parent"),
+            ("www.example.test", "host"),
+            ("backend.example.test", "sibling"),
+            ("www.example.test.evil.test", "lookalike"),
+        ]
+        let cookies = try rows.map { domain, value in
+            try #require(HTTPCookie(properties: [
+                .domain: domain, .path: "/", .name: "session", .value: value, .secure: true,
+            ]))
+        }
+        let selected = ProviderPluginCookieBroker.cookiesForRequest(
+            reversed ? Array(cookies.reversed()) : cookies, domain: "www.example.test")
+        #expect(selected.map(\.value) == ["host"])
+        let parent = ProviderPluginCookieBroker.cookiesForRequest(cookies, domain: "example.test")
+        #expect(parent.map(\.value) == ["parent"])
+    }
+    #endif
+
+    @Test
+    func `browser batches advance only after earlier candidates are consumed`() throws {
+        try self.isolated { () throws in
+            let batches = BatchCalls()
+            let broker = ProviderPluginCookieBroker(
+                provider: .abacus,
+                domains: ["apps.abacus.ai"],
+                settings: .init(cookieSource: .auto, manualCookieHeader: nil),
+                batches: { _, batch in
+                    batches.append(batch)
+                    return switch batch {
+                    case 0: [("session=chrome", "Chrome")]
+                    case 1: [("session=chrome", "Duplicate"), ("session=firefox", "Firefox")]
+                    default: nil
+                    }
+                })
+            let chrome = try #require(try broker.nextSession(domain: "apps.abacus.ai"))
+            #expect(chrome.header == "session=chrome")
+            #expect(batches.values == [0])
+            broker.rejectCookie(domain: "apps.abacus.ai", id: chrome.id)
+            #expect(try broker.nextSession(domain: "apps.abacus.ai")?.header == "session=firefox")
+            #expect(batches.values == [0, 1])
+            #expect(try broker.nextSession(domain: "apps.abacus.ai") == nil)
+            #expect(try broker.nextSession(domain: "apps.abacus.ai") == nil)
+            #expect(batches.values == [0, 1, 2])
+        }
+    }
+
+    @Test
+    func `empty first browser batch still reaches later browsers`() throws {
+        try self.isolated { () throws in
+            let broker = ProviderPluginCookieBroker(
+                provider: .abacus,
+                domains: ["apps.abacus.ai"],
+                settings: .init(cookieSource: .auto, manualCookieHeader: nil),
+                batches: { _, batch in batch == 0 ? [] : batch == 1 ? [("session=fresh", "Fixture")] : nil })
+            #expect(try broker.nextSession(domain: "apps.abacus.ai")?.header == "session=fresh")
+        }
+    }
+
+    private final class BatchCalls: @unchecked Sendable {
+        private let lock = NSLock()
+        private var storage: [Int] = []
+        var values: [Int] {
+            self.lock.withLock { self.storage }
+        }
+
+        func append(_ value: Int) { self.lock.withLock { self.storage.append(value) } }
+    }
+
     private func broker(
         source: ProviderCookieSource = .auto,
         importer: @escaping ProviderPluginCookieBroker.Importer = { [("session=\($0)", "Fixture")] })
@@ -249,6 +342,29 @@ struct ProviderPluginCookieBrokerTests {
             importer: importer)
     }
 
+    @Test
+    func `nonpersistent jars neither read overwrite nor clear the provider cache`() throws {
+        try self.isolated {
+            CookieHeaderCache.store(provider: .longcat, cookieHeader: "session=old", sourceLabel: "Synthetic cached")
+            let expected = try #require(CookieHeaderCache.load(provider: .longcat))
+            let broker = ProviderPluginCookieBroker(
+                provider: .longcat,
+                domains: ["longcat.chat"],
+                settings: .init(cookieSource: .auto, manualCookieHeader: nil),
+                batches: { _, _ in Issue.record("Legacy importer must not run"); return nil },
+                jarImporter: { [.init(header: "", source: "Synthetic import", origin: "", records: [])] })
+            #expect(try broker.nextSession(domain: "longcat.chat", cachedOnly: true) == nil)
+            let session = try #require(try broker.nextSession(domain: "longcat.chat"))
+            #expect(session.source == "Synthetic import")
+            broker.rejectCookie(domain: "longcat.chat", id: session.id)
+            #expect(try broker.nextSession(domain: "longcat.chat") == nil)
+            let actual = try #require(CookieHeaderCache.load(provider: .longcat))
+            #expect(actual.cookieHeader == expected.cookieHeader)
+            #expect(actual.storedAt == expected.storedAt)
+            #expect(actual.sourceLabel == expected.sourceLabel)
+        }
+    }
+
     private func isolated(_ body: () throws -> Void) rethrows {
         try KeychainCacheStore.withImplicitTestStoreForTesting {
             try KeychainCacheStore.withServiceOverrideForTesting("plugin-cookies-\(UUID().uuidString)") {
@@ -257,5 +373,21 @@ struct ProviderPluginCookieBrokerTests {
                 try CookieHeaderCache.withLegacyBaseURLOverrideForTesting(base, operation: body)
             }
         }
+    }
+}
+
+/// Single-batch fixture construction is test-only; production imports use the batched initializer.
+extension ProviderPluginCookieBroker {
+    typealias Importer = @Sendable (String) throws -> [(header: String, source: String)]
+
+    convenience init(
+        provider: UsageProvider,
+        domains: Set<String>,
+        settings: ProviderSettingsSnapshot.CookieProviderSettings,
+        importer: @escaping Importer)
+    {
+        self.init(provider: provider, domains: domains, settings: settings, batches: { domain, batch in
+            try batch == 0 ? importer(domain) : nil
+        })
     }
 }

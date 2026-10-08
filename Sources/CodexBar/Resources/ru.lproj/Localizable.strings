@@ -101,6 +101,8 @@
 "Average (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))" = "Среднее (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))";
 "Avoid Keychain prompts" = "Избегать запросов Keychain";
 "Balance" = "Баланс";
+"Cloud credits" = "Облачные кредиты";
+"Expired" = "Истекло";
 "Battery Saver" = "Экономия энергии";
 "Bordered" = "С рамкой";
 "Build" = "Сборка";
@@ -499,6 +501,7 @@
 "cost_summary_style_inline_help" = "Показывает сводку затрат прямо в главном меню.";
 "cost_summary_style_submenu_help" = "Вместо этого отображается подробное подменю «Стоимость».";
 "cost_summary_style_both_help" = "Показывает как сводку главного меню, так и подробное подменю «Стоимость».";
+"Month to date" = "С начала месяца";
 "cost_history_window_title" = "Окно истории";
 "cost_history_window_help" = "Задаёт, за сколько дней показывать локальные журналы использования в меню.";
 "cost_history_days_title" = "Окно истории: %d дней";
@@ -541,6 +544,11 @@
 "session_depleted_notification_body" = "Осталось 0%. Сообщим, когда квота снова станет доступна.";
 "session_restored_notification_title" = "Сеанс %@ восстановлен";
 "session_restored_notification_body" = "Квота сеанса снова доступна.";
+"limit_reset_notifications_title" = "Уведомления о сбросе";
+"limit_reset_notifications_subtitle" = "Сообщает, у какого провайдера и в каком окне сбросился лимит сеанса или недели.";
+"limit_reset_notification_title" = "Лимит %1$@ сброшен (%2$@)";
+"limit_reset_notification_body" = "Новая квота доступна.";
+"limit_reset_notification_body_with_account" = "Аккаунт %@. Новая квота доступна.";
 "quota_warning_warn_at" = "Предупреждать при";
 "quota_warning_global_threshold_subtitle" = "Остаток в процентах для сессионного и недельного окон, если провайдер не переопределяет пороги.";
 "quota_warning_sound" = "Воспроизвести звук уведомления";
@@ -845,7 +853,6 @@
 "No local data found" = "Локальные данные не найдены";
 "Credits unavailable; keep Codex running to refresh." = "Кредиты недоступны; оставьте Codex запущенным для обновления.";
 "No available fetch strategy for minimax." = "Нет доступной стратегии получения для MiniMax.";
-"No Cursor session found. Please log in to cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX, or Edge Canary. If you use Safari, grant CodexBar Full Disk Access in System Settings ▸ Privacy & Security. You can also sign in to Cursor from the CodexBar menu (Add / switch account)." = "Сеанс Cursor не найден. Войдите на cursor.com в Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Яндекс.Браузере, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX или Edge Canary. Если используете Safari, выдайте CodexBar полный доступ к диску в «Системные настройки» ▸ «Конфиденциальность и безопасность». Также можно войти в Cursor из меню CodexBar: «Добавить/переключить аккаунт».";
 "No OpenCode session cookies found in browsers." = "В браузерах не найдены cookie сеанса OpenCode.";
 "No available fetch strategy for %@." = "Нет доступной стратегии получения для %@.";
 "Today" = "Сегодня";
@@ -961,6 +968,12 @@
 "Copied" = "Скопировано";
 "Managed by Homebrew" = "Управляется через Homebrew";
 "Copy update command" = "Скопировать команду обновления";
+"Update to %@" = "Обновить до %@";
+"CodexBar %@ is available" = "Доступна версия CodexBar %@";
+"CodexBar is up to date" = "CodexBar обновлён";
+"Checking for updates…" = "Проверка обновлений…";
+"Updating with Homebrew…" = "Обновление через Homebrew…";
+"Homebrew update failed. You can run this command in Terminal instead:" = "Не удалось обновить через Homebrew. Вместо этого можно выполнить эту команду в Терминале:";
 "Copy error" = "Ошибка копирования";
 "Copy path" = "Копировать путь";
 "Extra usage spent" = "Потрачено доп. использования";
@@ -1414,7 +1427,6 @@
 "menu_bar_layout_gap_tight" = "Узкий";
 "menu_bar_layout_gap_regular" = "Обычный";
 "menu_bar_layout_vertical_adjustment" = "Вертикальная настройка";
-"menu_bar_layout_keyboard_hint" = "Delete удаляет выбранный элемент";
 "menu_bar_layout_sample_account" = "аккаунт";
 "menu_bar_layout_sample_runs_out" = "закончится пт.";
 "menu_bar_layout_token_icon" = "Значок";
@@ -1484,6 +1496,8 @@
 
 "Cumulative" = "Накопительно";
 "Token activity" = "Активность токенов";
+"Earlier activity" = "Ранние записи";
+"More recent activity" = "Недавние записи";
 "View" = "Вид";
 "in the last year" = "за последний год";
 "No activity in the last 12 months" = "Нет активности за последние 12 месяцев";
@@ -1543,6 +1557,10 @@
 "Cache write" = "Cache write";
 "Reasoning" = "Reasoning";
 "Sessions" = "Sessions";
+
+"Independent chat" = "Отдельный чат";
+"Independent chats" = "Отдельные чаты";
+"Chat %d" = "Чат %d";
 "Projects" = "Projects";
 "Plan metered" = "Plan metered";
 "List-price equivalent" = "List-price equivalent";
@@ -1620,7 +1638,34 @@
 "account_widgets_title" = "Обновлять данные аккаунтов для виджетов";
 "account_widgets_description" = "Выберите аккаунт в каждом виджете Account Usage. Обновляет до шести аккаунтов для каждого провайдера.";
 
+/* Spend time zone */
+"Statistics time zone" = "Часовой пояс статистики";
+"Use Mac's current time zone" = "Использовать текущий часовой пояс Mac";
+"Daily usage uses a fixed time zone. Changing it may move usage to a different day." = "Использование за день рассчитывается в фиксированном часовом поясе. Его изменение может перенести часть использования на другой день.";
+
 /* Antigravity local cost estimates */
 "antigravity_cost_estimate_hint" = "Локальное использование × публичные цены API · это не счета и не кредиты Antigravity";
 "antigravity_quota_window_note" = "Стоимость окна включает все модели · показано окно самого ограниченного семейства";
 "antigravity_no_priced_token_history" = "Нет оценённой истории токенов Antigravity.";
+"Supported browsers: %@. Use Manual for other browsers." = "Поддерживаемые браузеры: %@. Для других браузеров используйте ручной режим.";
+"Paste the Cookie header from a Chrome request to www.workbuddy.cn/profile/plans-usage." = "Вставьте заголовок Cookie из запроса Chrome к www.workbuddy.cn/profile/plans-usage.";
+"Reserved" = "Зарезервировано";
+
+/* Selected browser profile */
+"Browser profile" = "Профиль браузера";
+"Unavailable profile: %@" = "Профиль недоступен: %@";
+"Read only the selected %@ profile. Accounts are never selected automatically." = "Читать только выбранный профиль %@. Аккаунты никогда не выбираются автоматически.";
+
+// Spend chart navigation and inspection
+"Recorded spend" = "Учтённые расходы";
+"Highest recorded spend" = "Максимальные учтённые расходы";
+"Previous day" = "Предыдущий день";
+"Next day" = "Следующий день";
+"Click to isolate a source. Click again to show all." = "Нажмите для просмотра одного источника. Нажмите снова для просмотра всех.";
+"Recorded hourly spend" = "Записанные почасовые расходы";
+"Highest spend" = "Максимальные расходы";
+"Models for this day" = "Модели за этот день";
+
+"Click a bar to explore. Use the menu below for exact amounts." = "Нажмите на столбец для просмотра деталей. Точные суммы доступны в меню ниже.";
+/* Provider menu bar color */
+"Color by provider" = "Цвет по провайдеру";

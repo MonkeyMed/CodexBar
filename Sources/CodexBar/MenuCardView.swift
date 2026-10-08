@@ -32,15 +32,15 @@ struct UsageMenuCardView: View {
             }
 
             let id: String
-            let title: String
-            let percent: Double
+            var title: String
+            var percent: Double
             let percentStyle: PercentStyle
-            let statusText: String?
-            let resetText: String?
-            let detailText: String?
-            let detailLeftText: String?
-            let detailRightText: String?
-            let pacePercent: Double?
+            var statusText: String?
+            var resetText: String?
+            var detailText: String?
+            var detailLeftText: String?
+            var detailRightText: String?
+            var pacePercent: Double?
             /// True when detailLeftText/detailRightText came from a pace forecast.
             let detailIsPaceDerived: Bool
             let paceOnTop: Bool
@@ -48,7 +48,7 @@ struct UsageMenuCardView: View {
             let workdayMarkerPercents: [Double]
             let workdayTickAppearance: WorkdayTickAppearance
             let cardStyle: Bool
-            let sessionEquivalentDetail: UsagePaceText.SessionEquivalentDetail?
+            var sessionEquivalentDetail: UsagePaceText.SessionEquivalentDetail?
 
             init(
                 id: String,
@@ -188,6 +188,7 @@ struct UsageMenuCardView: View {
         var creditsHintText: String?
         var creditsHintCopyText: String?
         var limitResetCredits: LimitResetCreditsPresentation?
+        var cloudCredits: ProviderCostSection?
         let providerCost: ProviderCostSection?
         let tokenUsage: TokenUsageSection?
         let placeholder: String?
@@ -646,6 +647,14 @@ private struct UsageMenuCardUsageContentView: View {
             if self.model.showsOverviewSupplementalContent(compact: self.compactMetrics) {
                 self.supplementalContent
             }
+            if let cloudCredits = self.model.cloudCredits,
+               self.model.showsOverviewSupplementalContent(compact: self.compactMetrics)
+            {
+                if self.model.hasUsageContentAboveCloudCredits, self.showsSectionDividers {
+                    Divider()
+                }
+                ProviderCostContent(section: cloudCredits, progressColor: self.model.progressColor)
+            }
             if self.showBottomDivider {
                 Divider()
             }
@@ -662,7 +671,7 @@ private struct UsageMenuCardUsageContentView: View {
         } else if !self.model.usageNotes.isEmpty {
             UsageNotesContent(notes: self.model.usageNotes)
         } else if let placeholder = self.model.placeholder, self.model.metrics.isEmpty,
-                  self.model.limitResetCredits == nil
+                  self.model.limitResetCredits == nil, self.model.cloudCredits == nil
         {
             Text(placeholder)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
@@ -936,6 +945,7 @@ extension UsageMenuCardView.Model {
             creditsHintText: codexCreditLimitDetail ?? redacted.creditsHintText,
             creditsHintCopyText: codexCreditLimitDetail ?? redacted.creditsHintCopyText,
             limitResetCredits: Self.limitResetCredits(input: input),
+            cloudCredits: Self.cloudCreditsSection(input: input),
             providerCost: providerCost,
             tokenUsage: tokenUsage,
             placeholder: placeholder,
@@ -1163,7 +1173,7 @@ extension UsageMenuCardView.Model {
                 input: input,
                 projection: codexProjection,
                 percentStyle: percentStyle))
-        } else if let primary = snapshot.primary {
+        } else if let primary = snapshot.primary?.measured {
             metrics.append(Self.primaryMetric(
                 input: input,
                 primary: primary,
@@ -1247,7 +1257,7 @@ extension UsageMenuCardView.Model {
                 pacePercent: nil,
                 paceOnTop: true))
         }
-        return metrics
+        return Self.blockingQuotaMetrics(metrics, input: input, snapshot: snapshot)
     }
 
     private static func primaryMetric(

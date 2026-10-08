@@ -22,6 +22,7 @@ Code subscription credentials.
 - Detects the installed Kimi CLI version, including standalone installs outside the GUI app PATH
 - Enriches Code API/CLI usage with the monthly membership pool when a web session is available
 - Automatic menu-bar usage prioritizes an exhausted monthly Total usage pool over reset Code windows; explicit window selections remain authoritative
+- When a known monthly Total usage pool is exhausted, the menu card marks shorter Code windows as blocked by the monthly limit and omits their pace forecasts. Raw API percentages and explicit menu-bar selections remain available; unknown or expired monthly limits do not block the card.
 - API-key, Kimi Code CLI, automatic cookie, and manual cookie authentication methods
 - Multiple labeled web accounts through the shared token-account editor
 - Automatic refresh countdown
@@ -64,14 +65,14 @@ CodexBar calls `GET https://api.kimi.com/coding/v1/usages` with the API key. Set
 `KIMI_CODE_BASE_URL` only when testing a compatible HTTPS proxy or alternate host with an explicit API key.
 CodexBar never forwards a Kimi Code CLI credential to an endpoint override or to the International host.
 
-Both the older count-based response and the newer `usages` ratio pools are supported. Ratio pools take
-precedence for the 5-hour, weekly, and monthly Total usage windows they provide. Missing windows stay
-absent; percentages retain the API's precision and do not imply request counts. The monthly Total usage
-pool is available directly from the Code API, without requiring browser authentication, and optional web
+Both the older count-based response and the newer `usages` ratio pools are supported. Ratio pools supply
+the 5-hour, weekly, and monthly Total usage windows they provide. When reliable legacy counts describe
+the same duration and reset time (within two seconds), the more-exhausted reading wins, even when a
+monthly pool is present or weekly counts are absent. Equal readings retain the ratio pool's precision
+and metadata; mismatched or unknown reset periods never borrow counts. Missing windows stay absent,
+and ratio percentages do not imply request counts. The monthly Total usage pool is available directly
+from the Code API in the menu and CLI output, without requiring browser authentication; optional web
 enrichment cannot replace it. Legacy rate-limit counts remain available when no 5-hour ratio is reported.
-For mixed legacy responses with a reliable weekly count and no monthly ratio pool, a zero 5-hour or
-weekly ratio falls back to a populated count for the same duration and reset time (within two seconds).
-Nonzero ratios and monthly-pool responses keep their precedence; mismatched reset periods never borrow counts.
 Numeric legacy fields outside the integer range decode safely; unusable request counts do not create quota windows.
 
 ### Method 2: Kimi Code CLI
@@ -82,8 +83,16 @@ including the local hostname, OS details, and stable `~/.kimi-code/device_id` va
 missing, CodexBar creates it with private file permissions to match the official client.
 
 CodexBar treats CLI-owned authentication as read-only: it never uses the refresh token and never rewrites
-the credential file. When the access token expires, sign in again with Kimi Code CLI or configure an API
-key. Set `KIMI_CODE_HOME` only when the official CLI uses a non-default home directory.
+the credential file. Kimi rotates refresh tokens, so refreshing only in CodexBar's memory could invalidate
+the CLI's saved token; writing it back could race with the CLI's own renewal. The official CLI coordinates
+renewal and persists the replacement credential itself.
+
+CLI access tokens are short-lived. For a 15-minute token, CodexBar's 60-second safety margin means it
+becomes stale after 14 minutes without CLI renewal. Run `kimi` to renew it (sign in if the CLI asks), then
+refresh CodexBar. The next fetch rereads the file; restarting CodexBar is unnecessary. Auto mode tries
+configured web authentication when the CLI credential is stale or rejected, and prefers a configured API
+key before the CLI. For unattended use, add a Kimi Code API key in **Settings → Providers → Kimi** or set
+`KIMI_CODE_API_KEY`. Set `KIMI_CODE_HOME` only when the official CLI uses a non-default home directory.
 
 Custom `KIMI_CODE_BASE_URL`, `KIMI_CODE_OAUTH_HOST`, and `KIMI_OAUTH_HOST` values disable CLI credential
 reuse; use an explicit API key for endpoint-override testing.

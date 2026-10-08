@@ -7,6 +7,26 @@ enum PercentWindow: String, CaseIterable, Codable, Hashable, Sendable {
     case scopedWeekly
     case automatic
 
+    /// Shared by the simplified picker and legacy layout migration.
+    static func forMetric(
+        _ metric: ProviderMenuBarMetric,
+        primarySemanticWindow: ProviderSemanticWindow,
+        secondarySemanticWindow: ProviderSemanticWindow) -> Self
+    {
+        switch metric {
+        case .primary: self.forSemanticWindow(primarySemanticWindow)
+        case .secondary: self.forSemanticWindow(secondarySemanticWindow)
+        case .automatic, .primaryAndSecondary, .tertiary, .extraUsage, .average, .monthlyPlan: .automatic
+        }
+    }
+
+    static func forSemanticWindow(_ window: ProviderSemanticWindow) -> Self {
+        switch window {
+        case .session: .session
+        case .weekly: .weekly
+        }
+    }
+
     func providerLabel(provider: UsageProvider?) -> String? {
         guard let provider else { return nil }
         let presentation = ProviderDescriptorRegistry.descriptor(for: provider).presentation
@@ -578,20 +598,8 @@ enum MenuBarLayoutSemanticWindowResolver {
             .semanticWindows(snapshot: snapshot)
     }
 
-    /// The active model-scoped weekly carve-out (e.g. Claude's `claude-weekly-scoped-fable`
-    /// "Fable only" window), if the snapshot exposes one. Kept generic across models: keys off
-    /// the `claude-weekly-scoped-` id prefix rather than a specific model name, so it keeps
-    /// working when the promotional window rotates to a different model.
-    ///
-    /// When more than one scoped weekly window is active, the most constrained one (highest
-    /// used percentage) wins: that is the limit the user is closest to hitting and the one
-    /// worth showing in the always-visible menu bar. The full `NamedRateWindow` is returned so
-    /// callers can label the token with the active model instead of assuming Fable.
     static func scopedWeeklyNamedWindow(snapshot: UsageSnapshot?) -> NamedRateWindow? {
-        guard let snapshot else { return nil }
-        return (snapshot.extraRateWindows ?? [])
-            .filter { $0.id.hasPrefix("claude-weekly-scoped-") && !$0.window.isSyntheticPlaceholder }
-            .max { $0.window.usedPercent < $1.window.usedPercent }
+        snapshot?.claudeScopedWeeklyWindow
     }
 }
 
@@ -609,8 +617,6 @@ enum MenuBarLayoutBalanceResolver {
             guard let codexCredits, codexCredits.balanceReadSucceeded else { return nil }
             return codexCredits.remaining.rounded().formatted(
                 .number.precision(.fractionLength(0)).locale(Locale(identifier: "en_US")))
-        case .openrouter:
-            return snapshot?.detailRow(label: "Remaining")?.value
         case .deepseek:
             return MenuBarDisplayText.deepSeekBalanceText(snapshot: snapshot)
         case .deepinfra:
@@ -621,47 +627,30 @@ enum MenuBarLayoutBalanceResolver {
                       let value = balanceDetail.split(separator: " ", maxSplits: 1).first
             else { return nil }
             return (balanceDetail.contains(" owed") ? "-" : "") + String(value)
-        case .moonshot, .poe:
-            let value = self.displayValue(
-                from: snapshot?.loginMethod(for: provider), prefix: "Balance:", removingSuffix: "")
-            return provider == .moonshot
-                ? value?.split(separator: "·", maxSplits: 1).first?.trimmingCharacters(in: .whitespacesAndNewlines)
-                : value
+        case .moonshot:
+            return MenuBarDisplayText.prefixedValue(
+                from: snapshot?.loginMethod(for: provider), prefix: "Balance:", removingSuffix: "")?
+                .split(separator: "·", maxSplits: 1).first?.trimmingCharacters(in: .whitespacesAndNewlines)
         case .mistral:
-            return self.displayValue(
+            return MenuBarDisplayText.prefixedValue(
                 from: snapshot?.identity?.loginMethod, prefix: "API spend:", removingSuffix: " this month")
         case .opencodego:
             guard let cost = snapshot?.providerCost, cost.period == "Zen balance" else { return nil }
             return UsageFormatter.currencyString(cost.used, currencyCode: cost.currencyCode)
         case .mimo, .hyper:
             return snapshot?.detailRow(label: "Balance")?.value.components(separatedBy: " (Paid:").first
-        case .atlascloud, .vercel:
-            return snapshot?.detailRow(label: "Available balance")?.value
-        case .devpass:
-            return snapshot?.detailRow(label: "Cycle remaining")?.value
         default:
-            return nil
+            let descriptor = ProviderDescriptorRegistry.descriptor(for: provider)
+            let labels = descriptor.presentation.menuBarBalanceDetailLabels
+                ?? (descriptor.metadata.balanceOnly ? ["Balance"] : [])
+            if snapshot?.identity?.providerID == nil || snapshot?.identity?.providerID == provider.instanceID,
+               let balance = labels.lazy.compactMap({ snapshot?.detailRow(label: $0)?.value }).first
+            { return balance }
+            guard descriptor.presentation.menuBarBalanceDetailLabels == nil else { return nil }
+            guard descriptor.presentation.planRow.stripsBalancePrefix else { return nil }
+            return MenuBarDisplayText.prefixedValue(
+                from: snapshot?.loginMethod(for: provider), prefix: "Balance:", removingSuffix: "")
         }
-    }
-
-    private static func displayValue(
-        from text: String?,
-        prefix: String,
-        removingSuffix suffix: String)
-        -> String?
-    {
-        guard let rawValue = text?.trimmingCharacters(in: .whitespacesAndNewlines),
-              rawValue.hasPrefix(prefix)
-        else {
-            return nil
-        }
-        let valueStart = rawValue.index(rawValue.startIndex, offsetBy: prefix.count)
-        var value = rawValue[valueStart...].trimmingCharacters(in: .whitespacesAndNewlines)
-        if !suffix.isEmpty, value.hasSuffix(suffix) {
-            value = String(value.dropLast(suffix.count)).trimmingCharacters(
-                in: .whitespacesAndNewlines)
-        }
-        return value.isEmpty ? nil : value
     }
 
     /// Numeric USD amounts behind OpenRouter's "Credits" detail rows. The plugin formats both rows as
@@ -913,23 +902,12 @@ extension MenuBarLayout {
         provider: UsageProvider?)
         -> PercentWindow
     {
-        switch preference {
-        case .primary:
-            self.percentWindow(
-                ProviderDescriptorRegistry.descriptor(for: provider ?? .codex).presentation.primarySemanticWindow)
-        case .secondary:
-            self.percentWindow(
-                ProviderDescriptorRegistry.descriptor(for: provider ?? .codex).presentation.secondarySemanticWindow)
-        case .automatic, .primaryAndSecondary, .tertiary, .extraUsage, .average, .monthlyPlan:
-            .automatic
-        }
-    }
-
-    private static func percentWindow(_ window: ProviderSemanticWindow) -> PercentWindow {
-        switch window {
-        case .session: .session
-        case .weekly: .weekly
-        }
+        guard preference == .primary || preference == .secondary else { return .automatic }
+        let presentation = ProviderDescriptorRegistry.descriptor(for: provider ?? .codex).presentation
+        return PercentWindow.forMetric(
+            preference.providerMetric,
+            primarySemanticWindow: presentation.primarySemanticWindow,
+            secondarySemanticWindow: presentation.secondarySemanticWindow)
     }
 
     static func legacyPercentWindow(for lane: MenuBarLayoutLane, provider: UsageProvider?) -> PercentWindow {

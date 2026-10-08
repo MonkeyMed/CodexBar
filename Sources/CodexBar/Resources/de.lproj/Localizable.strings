@@ -100,6 +100,8 @@
 "Average (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))" = "Durchschnitt (\\\\(metadata.sessionLabel) + \\\\(metadata.weeklyLabel))";
 "Avoid Keychain prompts" = "Vermeiden Sie Aufforderungen zum Schlüsselbund";
 "Balance" = "Gleichgewicht";
+"Cloud credits" = "Cloud-Guthaben";
+"Expired" = "Abgelaufen";
 "Battery Saver" = "Batteriesparmodus";
 "Bordered" = "Umrandet";
 "Build" = "Build";
@@ -496,6 +498,7 @@
 "cost_summary_style_inline_help" = "Zeigt die Kostenübersicht direkt im Hauptmenü.";
 "cost_summary_style_submenu_help" = "Zeigt stattdessen das detaillierte Kosten-Untermenü.";
 "cost_summary_style_both_help" = "Zeigt die Hauptmenü-Übersicht und das detaillierte Kosten-Untermenü.";
+"Month to date" = "Seit Monatsbeginn";
 "cost_history_window_title" = "Verlaufsfenster";
 "cost_history_window_help" = "Legt fest, wie viele Tage lokaler Nutzungsprotokolle im Menü erscheinen.";
 "cost_history_days_title" = "Verlaufsfenster: %d Tage";
@@ -538,6 +541,11 @@
 "session_depleted_notification_body" = "0 % übrig. Werde benachrichtigen, wenn es wieder verfügbar ist.";
 "session_restored_notification_title" = "%@ Sitzung wiederhergestellt";
 "session_restored_notification_body" = "Das Sitzungskontingent ist wieder verfügbar.";
+"limit_reset_notifications_title" = "Reset-Benachrichtigungen";
+"limit_reset_notifications_subtitle" = "Nennt Anbieter und Zeitfenster, wenn ein Sitzungs- oder Wochenlimit zurückgesetzt wird.";
+"limit_reset_notification_title" = "%1$@ %2$@ Limit zurückgesetzt";
+"limit_reset_notification_body" = "Neues Kontingent ist verfügbar.";
+"limit_reset_notification_body_with_account" = "Konto %@. Neues Kontingent ist verfügbar.";
 "quota_warning_warn_at" = "Warnen Sie vor";
 "quota_warning_global_threshold_subtitle" = "Verbleibende Prozentsätze für Sitzungs- und Wochenfenster, es sei denn, ein Anbieter überschreibt sie.";
 "quota_warning_sound" = "Benachrichtigungston abspielen";
@@ -842,7 +850,6 @@
 "No local data found" = "Keine lokalen Daten gefunden";
 "Credits unavailable; keep Codex running to refresh." = "Credits nicht verfügbar; Lassen Sie Codex zum Aktualisieren laufen.";
 "No available fetch strategy for minimax." = "Für Minimax ist keine Abrufstrategie verfügbar.";
-"No Cursor session found. Please log in to cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX, or Edge Canary. If you use Safari, grant CodexBar Full Disk Access in System Settings ▸ Privacy & Security. You can also sign in to Cursor from the CodexBar menu (Add / switch account)." = "Keine Cursor-Sitzung gefunden. Bitte melden Sie sich bei Cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX oder Edge Canary an. Wenn Sie Safari verwenden, gewähren Sie CodexBar vollständigen Festplattenzugriff unter Systemeinstellungen ▸ Datenschutz und Sicherheit. Sie können sich auch über das CodexBar-Menü (Konto hinzufügen/wechseln) bei Cursor anmelden.";
 "No OpenCode session cookies found in browsers." = "In Browsern wurden keine OpenCode-Sitzungscookies gefunden.";
 "No available fetch strategy for %@." = "Für %@ ist keine Abrufstrategie verfügbar.";
 "Today" = "Heute";
@@ -957,6 +964,12 @@
 "Copied" = "Kopiert";
 "Managed by Homebrew" = "Von Homebrew verwaltet";
 "Copy update command" = "Aktualisierungsbefehl kopieren";
+"Update to %@" = "Auf %@ aktualisieren";
+"CodexBar %@ is available" = "CodexBar %@ ist verfügbar";
+"CodexBar is up to date" = "CodexBar ist auf dem neuesten Stand";
+"Checking for updates…" = "Suche nach Updates…";
+"Updating with Homebrew…" = "Aktualisierung über Homebrew…";
+"Homebrew update failed. You can run this command in Terminal instead:" = "Homebrew-Aktualisierung fehlgeschlagen. Sie können stattdessen diesen Befehl im Terminal ausführen:";
 "Copy error" = "Kopierfehler";
 "Copy path" = "Pfad kopieren";
 "Extra usage spent" = "Zusätzliche Nutzung aufgewendet";
@@ -1413,7 +1426,6 @@
 "menu_bar_layout_gap_tight" = "Eng";
 "menu_bar_layout_gap_regular" = "Normal";
 "menu_bar_layout_vertical_adjustment" = "Vertikale Ausrichtung";
-"menu_bar_layout_keyboard_hint" = "Die Löschtaste entfernt den ausgewählten Baustein";
 "menu_bar_layout_sample_account" = "Konto";
 "menu_bar_layout_sample_runs_out" = "reicht bis Fr.";
 "menu_bar_layout_token_icon" = "Symbol";
@@ -1483,6 +1495,8 @@
 
 "Cumulative" = "Kumulativ";
 "Token activity" = "Token-Aktivität";
+"Earlier activity" = "Frühere Aktivität";
+"More recent activity" = "Neuere Aktivität";
 "View" = "Ansicht";
 "in the last year" = "im letzten Jahr";
 "No activity in the last 12 months" = "Keine Aktivität in den letzten 12 Monaten";
@@ -1542,6 +1556,10 @@
 "Cache write" = "Cache write";
 "Reasoning" = "Reasoning";
 "Sessions" = "Sessions";
+
+"Independent chat" = "Unabhängiger Chat";
+"Independent chats" = "Unabhängige Chats";
+"Chat %d" = "Chat %d";
 "Projects" = "Projects";
 "Plan metered" = "Plan metered";
 "List-price equivalent" = "List-price equivalent";
@@ -1619,7 +1637,34 @@
 "account_widgets_title" = "Konten für Widgets aktuell halten";
 "account_widgets_description" = "Wähle in jedem Account Usage-Widget ein Konto aus. Aktualisiert bis zu sechs Konten pro Anbieter.";
 
+/* Spend time zone */
+"Statistics time zone" = "Zeitzone der Statistik";
+"Use Mac's current time zone" = "Aktuelle Zeitzone des Mac verwenden";
+"Daily usage uses a fixed time zone. Changing it may move usage to a different day." = "Die tägliche Nutzung wird in einer festen Zeitzone erfasst. Eine Änderung kann Nutzung einem anderen Tag zuordnen.";
+
 /* Antigravity local cost estimates */
 "antigravity_cost_estimate_hint" = "Lokale Nutzung × öffentliche API-Preise · keine Antigravity-Abrechnung oder Credits";
 "antigravity_quota_window_note" = "Fensterkosten umfassen alle Modelle · gezeigtes Fenster ist die am stärksten begrenzte Familie";
 "antigravity_no_priced_token_history" = "Keine bepreiste Antigravity-Token-Historie verfügbar.";
+"Supported browsers: %@. Use Manual for other browsers." = "Unterstützte Browser: %@. Verwende für andere Browser „Manuell“.";
+"Paste the Cookie header from a Chrome request to www.workbuddy.cn/profile/plans-usage." = "Füge den Cookie-Header einer Chrome-Anfrage an www.workbuddy.cn/profile/plans-usage ein.";
+"Reserved" = "Reserviert";
+
+/* Selected browser profile */
+"Browser profile" = "Browserprofil";
+"Unavailable profile: %@" = "Nicht verfügbares Profil: %@";
+"Read only the selected %@ profile. Accounts are never selected automatically." = "Nur das ausgewählte %@-Profil lesen. Konten werden nie automatisch ausgewählt.";
+
+// Spend chart navigation and inspection
+"Recorded spend" = "Erfasste Ausgaben";
+"Highest recorded spend" = "Höchste erfasste Ausgaben";
+"Previous day" = "Vorheriger Tag";
+"Next day" = "Nächster Tag";
+"Click to isolate a source. Click again to show all." = "Klicken, um eine Quelle einzeln anzuzeigen. Erneut klicken, um alle anzuzeigen.";
+"Recorded hourly spend" = "Erfasste stündliche Ausgaben";
+"Highest spend" = "Höchste Ausgaben";
+"Models for this day" = "Modelle für diesen Tag";
+
+"Click a bar to explore. Use the menu below for exact amounts." = "Klicke auf einen Balken für Details. Das Menü unten zeigt genaue Beträge.";
+/* Provider menu bar color */
+"Color by provider" = "Nach Anbieter einfärben";

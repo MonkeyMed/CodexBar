@@ -19,6 +19,7 @@ struct ClaudeProviderImplementation: ProviderImplementation {
     @MainActor
     func observeSettings(_ settings: SettingsStore) {
         _ = settings.claudeUsageDataSource
+        _ = settings.claudeWorkspaceSpendEnabled
         _ = settings.claudeAdminAPIKey
         _ = settings.claudeCookieSource
         _ = settings.claudeCookieHeader
@@ -87,8 +88,29 @@ struct ClaudeProviderImplementation: ProviderImplementation {
 
         let claudeSwapBinding = context.binding(\.claudeSwapEnabled)
         let claudeSwapShowSingleAccountBinding = context.binding(\.claudeSwapShowSingleAccount)
+        let claudeSwapExecutableField = ProviderSettingsFieldDescriptor(
+            id: "claude-swap-executable-path",
+            title: "claude-swap executable",
+            subtitle: "Path to the cswap executable (github.com/realiti4/claude-swap).",
+            kind: .plain,
+            placeholder: "~/.local/bin/cswap",
+            binding: context.binding(\.claudeSwapExecutablePath),
+            actions: [],
+            isVisible: nil)
 
         return [
+            ProviderSettingsToggleDescriptor(
+                id: "claude-workspace-spend",
+                title: "Show workspace spend",
+                subtitle: "Break down Admin API spend by workspace over the last 30 days.",
+                binding: context.binding(\.claudeWorkspaceSpendEnabled),
+                statusText: nil,
+                actions: [],
+                isVisible: nil,
+                isEnabled: nil,
+                onChange: nil,
+                onAppDidBecomeActive: nil,
+                onAppearWhenEnabled: nil),
             ProviderSettingsToggleDescriptor(
                 id: "claude-model-scoped-weekly-usage-visible",
                 title: "Show model-specific weekly usage in widgets",
@@ -136,6 +158,7 @@ struct ClaudeProviderImplementation: ProviderImplementation {
                 binding: claudeSwapBinding,
                 statusText: { Self.claudeSwapStatusText(store: context.store, settings: context.settings) },
                 actions: [],
+                inlineFields: [claudeSwapExecutableField],
                 isVisible: nil,
                 isEnabled: nil,
                 onChange: nil,
@@ -260,15 +283,6 @@ struct ClaudeProviderImplementation: ProviderImplementation {
                 binding: context.binding(\.claudeAdminAPIKey),
                 actions: [],
                 isVisible: nil),
-            ProviderSettingsFieldDescriptor(
-                id: "claude-swap-executable-path",
-                title: "claude-swap executable",
-                subtitle: "Path to the cswap executable (github.com/realiti4/claude-swap).",
-                kind: .plain,
-                placeholder: "~/.local/bin/cswap",
-                binding: context.binding(\.claudeSwapExecutablePath),
-                actions: [],
-                isVisible: { context.settings.claudeSwapEnabled }),
         ]
     }
 

@@ -190,8 +190,7 @@ with `--quick-view`, from the tray menu, or by clicking the tray icon after enab
 "Use compact Quick View from the tray" in Settings (off by default). It presents
 an Overview and provider tabs with the same provider icons used by the macOS menu, compact quota meters,
 reset times, pace, and optional local cost. The footer opens the full Usage & Spend
-window, Settings, About, or Quit. `--dashboard` also opens the full Usage & Spend window
-directly; `--spending` opens its Spending tab. The full Usage & Spend window retains
+window, Settings, About, or Quit. `--spending` opens its Spending tab. The full Usage & Spend window retains
 generic provider details and charts. Unknown values stay unknown. Identity is hidden by default. Display preferences control reset countdowns,
 absolute times, pace visibility, and low-quota colors. The tray can show two quota
 meters for the first displayed provider or a static icon. Unknown meters remain
@@ -205,7 +204,9 @@ checked every ten seconds. Missing or incomplete themes fall back to Qt's system
 palette. The preference can be disabled on any desktop.
 Local Spending shows Codex/Claude history across accounts on this machine, with
 calendar-day and 30-day estimates, token mix, provenance, and coverage. Estimates
-are not invoices. Opening spending scans independently of quota polling, with a
+are not invoices. Quick View only displays cached spending, with refresh errors and history
+coverage shown beside totals; opening it never starts a cost scan. Open Spending
+or use its Refresh action to load or update that history. Opening spending scans independently of quota polling, with a
 five-minute cache; Refresh forces a new scan.
 
 Quota polling defaults to five minutes. Optional refresh-on-open updates usage
@@ -229,11 +230,11 @@ fix or remove the file and restart. Authentication remains in the CLI's stores.
 codexbar-linux --background
 codexbar-linux --usage
 codexbar-linux --quick-view
-codexbar-linux --dashboard
 codexbar-linux --settings
 codexbar-linux --spending
 codexbar-linux --refresh
 codexbar-linux --snapshot
+codexbar-linux --snapshot --with-spending
 codexbar-linux --configure '{"provider":"both","refreshSeconds":300}'
 codexbar-linux --autostart status # also enable or disable
 codexbar-linux --quit
@@ -249,6 +250,14 @@ contains `{provider, tag, text}` for the same first two entries shown in `summar
 with quota text already formatted for the used/remaining preference. Adapters may
 replace the tag with a local logo and count additional `entries` as `+N`; older
 backends omit this field, so adapters should fall back to `summary`.
+Each entry also carries `plan`, `status`, `statusLevel`, `updatedAt`, `credits`,
+`extraUsage` (period, currency and used/limit/balance amounts), and `resetCredits`
+(available count and soonest expiry, projected by the shared CLI inventory); windows carry `paceExpected`, the expected used
+percentage for an even pace. `spending` lists today and 30-day local cost per provider
+once a scan has run. Spending is never scanned by a plain snapshot; `--with-spending`
+asks for a scan when the five-minute cache is stale, for panels that show it.
+Older CLIs without the compact reset-credit summary leave that field unavailable. Plan and status
+labels redact email addresses even when account identity is enabled in the desktop window.
 The snapshot excludes account identity, CLI paths, and credential configuration.
 It includes display values and reset text for adapters. Adapters should check `schemaVersion`, tolerate
 unknown fields, and treat a missing backend as unavailable.
@@ -265,6 +274,8 @@ node --test Integrations/Omarchy/test.mjs Integrations/Omarchy/notifications.tes
 python3 Integrations/Omarchy/test_install.py
 python3 Integrations/Linux/tests/test_desktop.py
 python3 Integrations/Linux/tests/test_package.py
+# With qml6-module-qttest installed (Ubuntu/Debian):
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software /usr/lib/qt6/bin/qmltestrunner -input Integrations/Linux/tests/qml
 # Account-action test: qmake6 Integrations/Linux/tests/accounts.pro in a build directory,
 # then make and run ./tst_accounts. Uses a fake terminal and fake provider CLIs.
 ```

@@ -35,7 +35,7 @@ public:
     QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override {
         const auto provider = id.section('?', 0, 0);
         if (!QRegularExpression("^[a-z0-9-]{1,80}$").match(provider).hasMatch()) return {};
-        QFile icon(":/logos/" + provider + ".svg");
+        QFile icon(":/logos/ProviderIcon-" + provider + ".svg");
         if (!icon.open(QIODevice::ReadOnly)) return {};
         QSvgRenderer svg(icon.readAll());
         if (!svg.isValid()) return {};
@@ -79,20 +79,22 @@ int main(int argc, char **argv) {
     QCommandLineParser parser;
     parser.setApplicationDescription("CodexBar desktop for Linux · Qt windows and optional tray");
     parser.addHelpOption(); parser.addVersionOption();
-    for (const auto &name : {"snapshot", "refresh", "settings", "spending", "dashboard", "usage", "quick-view", "quit", "background", "no-tray"})
+    for (const auto &name : {"snapshot", "refresh", "settings", "spending", "usage", "quick-view", "quit", "background", "no-tray"})
         parser.addOption(QCommandLineOption(name, QString("%1 the running desktop app").arg(name)));
     parser.addOption(QCommandLineOption("autostart", "Set login startup: enable, disable, status", "action"));
     parser.addOption(QCommandLineOption("configure", "Update desktop settings through local IPC", "json"));
     parser.addOption(QCommandLineOption("cli", "CodexBar CLI executable for a new instance", "path"));
+    parser.addOption(QCommandLineOption("with-spending", "With --snapshot, refresh local spending when its cache is stale"));
     parser.process(*application);
     QString command = "usage";
-    for (const auto &name : {"background", "usage", "quick-view", "settings", "spending", "dashboard", "refresh", "snapshot", "quit", "configure", "autostart"})
+    for (const auto &name : {"background", "usage", "quick-view", "settings", "spending", "refresh", "snapshot", "quit", "configure", "autostart"})
         if (parser.isSet(name)) command = name;
     const bool clientOnly = QStringList{"snapshot", "refresh", "quit", "configure", "autostart"}.contains(command);
     const bool noTray = parser.isSet("no-tray");
     const auto cli = parser.value("cli");
     QJsonObject message{{"command", command}};
     if (command == "autostart") message["action"] = parser.value("autostart");
+    if (command == "snapshot" && parser.isSet("with-spending")) message["spending"] = true;
     if (command == "configure") {
         QJsonParseError error;
         const auto document = QJsonDocument::fromJson(parser.value("configure").toUtf8(), &error);
@@ -177,7 +179,7 @@ int main(int argc, char **argv) {
     QSystemTrayIcon tray(QIcon(":/icon.svg"));
     QMenu menu;
     menu.addAction("Quick View", &controller, [&controller] { controller.showWindow("quick-view"); });
-    menu.addAction("Usage & Spend…", &controller, [&controller] { controller.showWindow("dashboard"); });
+    menu.addAction("Usage & Spend…", &controller, [&controller] { controller.showWindow("usage"); });
     menu.addAction("Settings…", &controller, [&controller] { controller.showWindow("settings"); });
     menu.addSeparator();
     menu.addAction("Refresh", &controller, [&controller] { controller.refresh(); controller.refreshCosts(); });

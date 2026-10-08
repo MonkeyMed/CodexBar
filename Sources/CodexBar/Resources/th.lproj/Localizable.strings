@@ -80,6 +80,8 @@
 "Average (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))" = "เฉลี่ย (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))";
 "Avoid Keychain prompts" = "หลีกเลี่ยงข้อความแจ้ง Keychain";
 "Balance" = "สมดุล";
+"Cloud credits" = "เครดิตคลาวด์";
+"Expired" = "หมดอายุแล้ว";
 "Battery Saver" = "ประหยัดแบตเตอรี่";
 "Bordered" = "มีพรมแดน";
 "Build" = "สร้าง";
@@ -482,6 +484,7 @@
 "cost_summary_style_inline_help" = "แสดงสรุปค่าใช้จ่ายในเมนูหลักโดยตรง";
 "cost_summary_style_submenu_help" = "แสดงเมนูย่อยค่าใช้จ่ายแบบละเอียดแทน";
 "cost_summary_style_both_help" = "แสดงทั้งสรุปในเมนูหลักและเมนูย่อยค่าใช้จ่ายแบบละเอียด";
+"Month to date" = "ตั้งแต่ต้นเดือนจนถึงวันนี้";
 "cost_history_window_title" = "กรอบเวลาประวัติ";
 "cost_history_window_help" = "กำหนดจำนวนวันของบันทึกการใช้งานในเครื่องที่จะแสดงในเมนู";
 "cost_history_days_title" = "กรอบเวลาประวัติ: %d วัน";
@@ -524,6 +527,11 @@
 "session_depleted_notification_body" = "เหลือ 0% จะแจ้งเตือนเมื่อกลับมาใช้งานได้อีกครั้ง";
 "session_restored_notification_title" = "%@ เซสชันที่กู้คืน";
 "session_restored_notification_body" = "โควต้าเซสชันพร้อมใช้งานอีกครั้ง";
+"limit_reset_notifications_title" = "การแจ้งเตือนการรีเซ็ต";
+"limit_reset_notifications_subtitle" = "แจ้งว่าผู้ให้บริการใดและช่วงใดถูกรีเซ็ตเมื่อขีดจำกัดเซสชันหรือรายสัปดาห์รีเซ็ต";
+"limit_reset_notification_title" = "ขีดจำกัด%2$@ของ %1$@ รีเซ็ตแล้ว";
+"limit_reset_notification_body" = "มีโควตาใหม่พร้อมใช้งาน";
+"limit_reset_notification_body_with_account" = "บัญชี %@ มีโควตาใหม่พร้อมใช้งาน";
 "quota_warning_warn_at" = "เตือนที่";
 "quota_warning_global_threshold_subtitle" = "เปอร์เซ็นต์ที่เหลืออยู่สําหรับกรอบเวลาเซสชันและรายสัปดาห์ เว้นแต่ผู้ให้บริการจะแทนที่";
 "quota_warning_sound" = "เล่นเสียงแจ้งเตือน";
@@ -850,7 +858,6 @@
 "No local data found" = "ไม่พบข้อมูลในเครื่อง";
 "Credits unavailable; keep Codex running to refresh." = "ไม่มีเครดิต Codex ทํางานต่อไปเพื่อรีเฟรช";
 "No available fetch strategy for minimax." = "ไม่มีกลยุทธ์การดึงข้อมูลสําหรับ minimax";
-"No Cursor session found. Please log in to cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX, or Edge Canary. If you use Safari, grant CodexBar Full Disk Access in System Settings ▸ Privacy & Security. You can also sign in to Cursor from the CodexBar menu (Add / switch account)." = "ไม่พบเซสชัน Cursor โปรดเข้าสู่ระบบ cursor.com ใน Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX หรือ Edge Canary หากคุณใช้ Safari ให้สิทธิ์การเข้าถึงดิสก์แบบเต็ม CodexBar ใน การตั้งค่าระบบ ▸ ความเป็นส่วนตัวและความปลอดภัย คุณยังสามารถลงชื่อเข้าใช้ Cursor ได้จากเมนู CodexBar (เพิ่ม / สลับบัญชี)";
 "No OpenCode session cookies found in browsers." = "ไม่พบคุกกี้เซสชัน OpenCode ในเบราว์เซอร์";
 "No available fetch strategy for %@." = "ไม่มีกลยุทธ์การดึงข้อมูลสําหรับ %@";
 "Today" = "วันนี้";
@@ -966,6 +973,12 @@
 "Copied" = "คัดลอกแล้ว";
 "Managed by Homebrew" = "จัดการโดย Homebrew";
 "Copy update command" = "คัดลอกคำสั่งอัปเดต";
+"Update to %@" = "อัปเดตเป็น %@";
+"CodexBar %@ is available" = "CodexBar %@ พร้อมให้ใช้งานแล้ว";
+"CodexBar is up to date" = "CodexBar เป็นเวอร์ชันล่าสุดแล้ว";
+"Checking for updates…" = "กำลังตรวจหาอัปเดต…";
+"Updating with Homebrew…" = "กำลังอัปเดตด้วย Homebrew…";
+"Homebrew update failed. You can run this command in Terminal instead:" = "อัปเดตผ่าน Homebrew ไม่สำเร็จ คุณสามารถเรียกใช้คำสั่งนี้ใน Terminal แทนได้:";
 "Copy error" = "ข้อผิดพลาดในการคัดลอก";
 "Copy path" = "คัดลอกเส้นทาง";
 "Extra usage spent" = "การใช้จ่ายเพิ่มเติม";
@@ -1416,7 +1429,6 @@
 "menu_bar_layout_gap_tight" = "ชิด";
 "menu_bar_layout_gap_regular" = "ปกติ";
 "menu_bar_layout_vertical_adjustment" = "ปรับแนวตั้ง";
-"menu_bar_layout_keyboard_hint" = "Delete ลบโทเค็นที่เลือก";
 "menu_bar_layout_sample_account" = "บัญชี";
 "menu_bar_layout_sample_runs_out" = "หมดวันศุกร์";
 "menu_bar_layout_token_icon" = "ไอคอน";
@@ -1486,6 +1498,8 @@
 
 "Cumulative" = "สะสม";
 "Token activity" = "กิจกรรมโทเทน";
+"Earlier activity" = "กิจกรรมก่อนหน้า";
+"More recent activity" = "กิจกรรมล่าสุด";
 "View" = "มุมมอง";
 "in the last year" = "ในปีที่ผ่านมา";
 "No activity in the last 12 months" = "ไม่มีกิจกรรมในช่วง 12 เดือนที่ผ่านมา";
@@ -1545,6 +1559,10 @@
 "Cache write" = "Cache write";
 "Reasoning" = "Reasoning";
 "Sessions" = "Sessions";
+
+"Independent chat" = "แชทอิสระ";
+"Independent chats" = "แชทอิสระ";
+"Chat %d" = "แชท %d";
 "Projects" = "Projects";
 "Plan metered" = "Plan metered";
 "List-price equivalent" = "List-price equivalent";
@@ -1623,7 +1641,34 @@
 "account_widgets_title" = "อัปเดตบัญชีสำหรับวิดเจ็ต";
 "account_widgets_description" = "เลือกบัญชีในวิดเจ็ต Account Usage แต่ละรายการ อัปเดตได้สูงสุดหกบัญชีต่อผู้ให้บริการ";
 
+/* Spend time zone */
+"Statistics time zone" = "เขตเวลาสำหรับสถิติ";
+"Use Mac's current time zone" = "ใช้เขตเวลาปัจจุบันของ Mac";
+"Daily usage uses a fixed time zone. Changing it may move usage to a different day." = "การใช้งานรายวันจะจัดกลุ่มตามเขตเวลาที่กำหนดไว้ การเปลี่ยนเขตเวลาอาจย้ายการใช้งานไปอยู่ในวันอื่น";
+
 /* Antigravity local cost estimates */
 "antigravity_cost_estimate_hint" = "การใช้งานในเครื่อง × ราคา API สาธารณะ · ไม่ใช่ค่าบริการหรือเครดิตของ Antigravity";
 "antigravity_quota_window_note" = "ค่าใช้จ่ายของหน้าต่างครอบคลุมทุกโมเดล · หน้าต่างที่แสดงคือกลุ่มที่จำกัดมากที่สุด";
 "antigravity_no_priced_token_history" = "ไม่มีประวัติโทเคน Antigravity ที่คิดราคาไว้";
+"Supported browsers: %@. Use Manual for other browsers." = "เบราว์เซอร์ที่รองรับ: %@ ใช้โหมดกำหนดเองสำหรับเบราว์เซอร์อื่น";
+"Paste the Cookie header from a Chrome request to www.workbuddy.cn/profile/plans-usage." = "วางส่วนหัว Cookie จากคำขอของ Chrome ไปยัง www.workbuddy.cn/profile/plans-usage";
+"Reserved" = "สำรองไว้";
+
+/* Selected browser profile */
+"Browser profile" = "โปรไฟล์เบราว์เซอร์";
+"Unavailable profile: %@" = "โปรไฟล์ไม่พร้อมใช้งาน: %@";
+"Read only the selected %@ profile. Accounts are never selected automatically." = "อ่านเฉพาะโปรไฟล์ %@ ที่เลือกเท่านั้น ระบบจะไม่เลือกบัญชีโดยอัตโนมัติ";
+
+// Spend chart navigation and inspection
+"Recorded spend" = "ค่าใช้จ่ายที่บันทึกไว้";
+"Highest recorded spend" = "ค่าใช้จ่ายที่บันทึกไว้สูงสุด";
+"Previous day" = "วันก่อนหน้า";
+"Next day" = "วันถัดไป";
+"Click to isolate a source. Click again to show all." = "คลิกเพื่อดูแหล่งเดียว คลิกอีกครั้งเพื่อดูทั้งหมด";
+"Recorded hourly spend" = "ค่าใช้จ่ายรายชั่วโมงที่บันทึกไว้";
+"Highest spend" = "ค่าใช้จ่ายสูงสุด";
+"Models for this day" = "โมเดลของวันนี้";
+
+"Click a bar to explore. Use the menu below for exact amounts." = "คลิกแท่งกราฟเพื่อดูรายละเอียด ใช้เมนูด้านล่างเพื่อดูจำนวนเงินที่แน่นอน";
+/* Provider menu bar color */
+"Color by provider" = "สีตามผู้ให้บริการ";

@@ -100,7 +100,7 @@ extension UsageMenuCardView.Model {
                let total = input.snapshot?.detailRow(label: "Credits total")?.value,
                total != "0"
             {
-                presentation.detailLeft = String(format: L("%@ of %@ credits left"), remaining, total)
+                presentation.detailText = String(format: L("%@ of %@ credits left"), remaining, total)
             }
         case .none, .requestQuota:
             break
@@ -229,33 +229,49 @@ extension UsageMenuCardView.Model {
         return PersonalInfoRedactor.redactEmails(in: "Team\(detail[separator.lowerBound...])", isEnabled: true)
     }
 
-    /// Clears the pace stripe and the forecast text when the user hides pace.
-    /// Copies every `Metric` field so unrelated decorations (quota and workday
-    /// ticks) survive; dropping one here would silently disable them.
+    static func blockingQuotaMetrics(_ metrics: [Metric], input: Input, snapshot: UsageSnapshot) -> [Metric] {
+        guard let policy = ProviderDescriptorRegistry.descriptor(for: input.provider).presentation.menuCard
+            .blockingQuota,
+            let blocker = snapshot.extraRateWindows?.first(where: { $0.id == policy.windowID && $0.usageKnown })
+        else { return metrics }
+        return metrics.map { metric in
+            let window: RateWindow? = switch metric.id {
+            case "primary": snapshot.primary
+            case "secondary": snapshot.secondary
+            case "tertiary": snapshot.tertiary
+            default: snapshot.extraRateWindows?.first { $0.id == metric.id && $0.usageKnown }?.window
+            }
+            guard let window, !window.isSyntheticPlaceholder,
+                  let projection = RateWindow.bindingQuotaProjection(
+                      primary: window, bindingLanes: [blocker.window], now: input.now)
+            else { return metric }
+            var blocked = metric
+            blocked.percent = input.usageBarsShowUsed ? projection.usedPercent : 100 - projection.usedPercent
+            blocked.statusText = L(policy.message)
+            // The blocking quota's own row owns its reset; shorter resets cannot restore access.
+            blocked.resetText = nil
+            blocked.detailText = nil
+            blocked.detailLeftText = nil
+            blocked.detailRightText = nil
+            blocked.pacePercent = nil
+            blocked.sessionEquivalentDetail = nil
+            return blocked
+        }
+    }
+
+    /// Clear only pace fields, preserving unrelated quota and workday decorations.
     static func paceGatedMetrics(_ metrics: [Metric], paceVisible: Bool) -> [Metric] {
         guard !paceVisible else { return metrics }
         return metrics.map { metric in
-            // The detail slots are shared: providers such as Kiro, Copilot, and
-            // ZenMux put their own credit and reset text there. Clear them only
-            // when they carry a pace forecast.
-            Metric(
-                id: metric.id,
-                title: metric.title,
-                percent: metric.percent,
-                percentStyle: metric.percentStyle,
-                statusText: metric.statusText,
-                resetText: metric.resetText,
-                detailText: metric.detailText,
-                detailLeftText: metric.detailIsPaceDerived ? nil : metric.detailLeftText,
-                detailRightText: metric.detailIsPaceDerived ? nil : metric.detailRightText,
-                pacePercent: nil,
-                detailIsPaceDerived: metric.detailIsPaceDerived,
-                paceOnTop: metric.paceOnTop,
-                warningMarkerPercents: metric.warningMarkerPercents,
-                workdayMarkerPercents: metric.workdayMarkerPercents,
-                workdayTickAppearance: metric.workdayTickAppearance,
-                cardStyle: metric.cardStyle,
-                sessionEquivalentDetail: nil)
+            var result = metric
+            // Provider-owned balance and reset text shares these slots with pace forecasts.
+            if metric.detailIsPaceDerived {
+                result.detailLeftText = nil
+                result.detailRightText = nil
+            }
+            result.pacePercent = nil
+            result.sessionEquivalentDetail = nil
+            return result
         }
     }
 
@@ -266,27 +282,14 @@ extension UsageMenuCardView.Model {
     {
         guard hidePersonalInfo else { return metrics }
         return metrics.map { metric in
-            Metric(
-                id: metric.id,
-                title: PersonalInfoRedactor.redactEmails(in: metric.title, isEnabled: true) ?? metric.title,
-                percent: metric.percent,
-                percentStyle: metric.percentStyle,
-                statusText: PersonalInfoRedactor.redactEmails(in: metric.statusText, isEnabled: true),
-                resetText: PersonalInfoRedactor.redactEmails(in: metric.resetText, isEnabled: true),
-                detailText: Self.redactedMetricDetail(
-                    metric.detailText,
-                    provider: provider,
-                    metricID: metric.id),
-                detailLeftText: PersonalInfoRedactor.redactEmails(in: metric.detailLeftText, isEnabled: true),
-                detailRightText: PersonalInfoRedactor.redactEmails(in: metric.detailRightText, isEnabled: true),
-                pacePercent: metric.pacePercent,
-                detailIsPaceDerived: metric.detailIsPaceDerived,
-                paceOnTop: metric.paceOnTop,
-                warningMarkerPercents: metric.warningMarkerPercents,
-                workdayMarkerPercents: metric.workdayMarkerPercents,
-                workdayTickAppearance: metric.workdayTickAppearance,
-                cardStyle: metric.cardStyle,
-                sessionEquivalentDetail: metric.sessionEquivalentDetail)
+            var result = metric
+            result.title = PersonalInfoRedactor.redactEmails(in: metric.title, isEnabled: true) ?? metric.title
+            result.statusText = PersonalInfoRedactor.redactEmails(in: metric.statusText, isEnabled: true)
+            result.resetText = PersonalInfoRedactor.redactEmails(in: metric.resetText, isEnabled: true)
+            result.detailText = Self.redactedMetricDetail(metric.detailText, provider: provider, metricID: metric.id)
+            result.detailLeftText = PersonalInfoRedactor.redactEmails(in: metric.detailLeftText, isEnabled: true)
+            result.detailRightText = PersonalInfoRedactor.redactEmails(in: metric.detailRightText, isEnabled: true)
+            return result
         }
     }
 
@@ -325,6 +328,11 @@ extension UsageMenuCardView.Model {
             return [L("Quota estimated from local usage history")] + subscriptionNotes
         }
 
+        // Provider-specific by design: Muse browser-team quotas come from a user-selected dev.meta.ai team.
+        if input.provider == .muse, input.snapshot?.dataConfidence == .estimated {
+            return [L("Quota from the selected dev.meta.ai browser team")] + subscriptionNotes
+        }
+
         if let notes = self.apiProviderUsageNotes(input: input) {
             return notes + subscriptionNotes
         }
@@ -340,6 +348,7 @@ extension UsageMenuCardView.Model {
             self.openAIAPIUsage == nil &&
             self.inlineUsageDashboard == nil &&
             self.limitResetCredits == nil &&
+            self.cloudCredits == nil &&
             self.creditsRemaining == nil &&
             self.providerCost == nil &&
             self.tokenUsage == nil &&
@@ -353,7 +362,17 @@ extension UsageMenuCardView.Model {
             self.openAIAPIUsage != nil ||
             self.inlineUsageDashboard != nil ||
             self.limitResetCredits != nil ||
+            self.cloudCredits != nil ||
             self.placeholder != nil
+    }
+
+    /// The cloud-credit row only needs a divider when another usage row is drawn before it.
+    var hasUsageContentAboveCloudCredits: Bool {
+        !self.metrics.isEmpty ||
+            !self.usageNotes.isEmpty ||
+            !self.providerDetails.isEmpty ||
+            self.inlineUsageDashboard != nil ||
+            self.limitResetCredits != nil
     }
 
     func showsOverviewSupplementalContent(compact: Bool) -> Bool {
@@ -368,6 +387,7 @@ extension UsageMenuCardView.Model {
             self.providerDetails.isEmpty &&
             self.openAIAPIUsage == nil &&
             self.limitResetCredits == nil &&
+            self.cloudCredits == nil &&
             self.placeholder == nil
     }
 
@@ -375,6 +395,7 @@ extension UsageMenuCardView.Model {
         !self.metrics.isEmpty ||
             self.creditsText != nil ||
             self.limitResetCredits != nil ||
+            self.cloudCredits != nil ||
             self.providerCost != nil ||
             self.tokenUsage != nil
     }
@@ -413,6 +434,7 @@ extension UsageMenuCardView.Model {
                   candidateRemaining: candidate.creditsRemaining),
               self.creditsHintText == candidate.creditsHintText,
               Self.hasCompatibleLimitResetCreditsLayout(self.limitResetCredits, candidate.limitResetCredits),
+              Self.hasCompatibleProviderCostLayout(self.cloudCredits, candidate.cloudCredits),
               self.placeholder == candidate.placeholder,
               Self.hasCompatibleDashboardLayout(self.inlineUsageDashboard, candidate.inlineUsageDashboard),
               Self.hasCompatibleProviderCostLayout(self.providerCost, candidate.providerCost),
@@ -691,18 +713,32 @@ extension UsageMenuCardView.Model {
     static func subscriptionMetadataNotes(snapshot: UsageSnapshot?, provider: UsageProvider) -> [String] {
         guard let snapshot else { return [] }
         if let renewsAt = snapshot.subscriptionRenewsAt {
-            return [String(format: L("Renews: %@"), self.subscriptionDateString(renewsAt, provider: provider))]
+            return [String(
+                format: L("Renews: %@"),
+                self.subscriptionDateString(
+                    renewsAt,
+                    provider: provider,
+                    dateOnly: snapshot.subscriptionRenewsAtIsDateOnly))]
         }
         if let expiresAt = snapshot.subscriptionExpiresAt {
-            return [String(format: L("Plan expires: %@"), self.subscriptionDateString(expiresAt, provider: provider))]
+            return [String(
+                format: L("Plan expires: %@"),
+                self.subscriptionDateString(
+                    expiresAt,
+                    provider: provider,
+                    dateOnly: snapshot.subscriptionExpiresAtIsDateOnly))]
         }
         return []
     }
 
-    private static func subscriptionDateString(_ date: Date, provider: UsageProvider) -> String {
+    private static func subscriptionDateString(
+        _ date: Date,
+        provider: UsageProvider,
+        dateOnly: Bool = false) -> String
+    {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
-        formatter.timeZone = self.subscriptionDateTimeZone(provider: provider)
+        formatter.timeZone = dateOnly ? TimeZone(secondsFromGMT: 0) : self.subscriptionDateTimeZone(provider: provider)
         formatter.setLocalizedDateFormatFromTemplate("MMM d, yyyy")
         return formatter.string(from: date)
     }

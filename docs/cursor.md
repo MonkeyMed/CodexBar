@@ -45,7 +45,7 @@ mode never reads Cursor.app credentials; macOS uses its cookie ladder, while Lin
    - Keychain cache: `com.steipete.codexbar.cache` (account `cookie.cursor`).
 
 3) **Browser cookie import** (macOS only)
-   - Cookie order from provider metadata (default: Safari → Chrome → Firefox).
+   - Cookie order from provider metadata, falling back to SweetCookieKit's default browser catalog, including Aside, Opera, and Opera Neon.
    - Domain filters: `cursor.com`, `cursor.sh`.
    - Cookie names required (any one counts):
      - `WorkosCursorSessionToken`
@@ -67,6 +67,7 @@ Manual option:
 
 ## Add and switch account
 - **Add Account** opens `https://authenticator.cursor.sh/` in a supported browser.
+- Aside, Opera, and Opera Neon are supported with SweetCookieKit 0.5.5. The selected application's bundle identifier pins login to that browser's cookie store.
 - **Switch Account** opens the same authenticator and waits for a different stable account ID when available, falling back to normalized email when IDs are unavailable.
 - When the system's HTTPS handler is a supported browser, CodexBar opens the route there automatically. When the handler is an intermediary app, CodexBar asks the user to choose a concrete supported browser before opening the route.
 - CodexBar pins the original HTTPS route to that concrete browser and polls cookies only from the same application. Interactive login never falls back to another browser, a stored session, or Cursor.app; cancelling browser selection or the absence of a supported browser stops before login opens.
@@ -97,6 +98,7 @@ Manual option:
 - Automatic usage (`codexbar usage --provider cursor`) supports the signed-in Cursor app on Linux after manual, cached, and
   stored sessions have been considered.
 - Authentication order: manual cookie header → cached session → stored session → Cursor app access token.
+- Linux requests use a reusable HTTP session with automatic cookie storage disabled, so a long-running `serve` process cannot replace the selected credential with cookies left by earlier responses.
 - The app token is read from absolute `$XDG_CONFIG_HOME/Cursor/User/globalStorage/state.vscdb`, then `$HOME/.config/...` when `HOME` is absolute, then the account home’s `.config/...`. Relative `XDG_CONFIG_HOME` / `HOME` values are ignored. The database is read-only; expired app tokens are not refreshed by CodexBar.
 - Cursor usage includes the Grok Bot weekly allowance and reset time when the account exposes it. Grok Bot endpoint failures do not hide Cursor usage.
 - Explicit `--source web` requires a manual cookie and never reads the app token.
@@ -130,6 +132,7 @@ Fetch behavior:
 - Pages of 1000 events (up to 200 pages), with exact page-boundary overlap removed before aggregation. Reaching the safety cap or otherwise receiving fewer events than Cursor reports fails the refresh instead of publishing a partial total.
 - Empty query windows return `{}`; empty terminal pages omit the event array but retain `totalUsageEventsCount`. Both shapes were verified against populated pages from the same live session. The decoder accepts only these exact omitted-array shapes, preserves the query count, and rejects malformed arrays or ambiguous envelopes; a terminal `{}` contradicting an earlier positive count still fails.
 - The window start is snapped to the local day boundary so a 1-day window covers all of today and wider windows keep their full first day.
+- All-history requests clamp the lower bound to the Unix epoch for the dashboard API, preserving all Cursor history without sending the shared period model's pre-epoch sentinel. Rolling and month-to-date windows retain their selected cost-bucketing time zone.
 
 Two totals are reported from the same events:
 - **API-rate estimate**: reported `tokenUsage.totalCents`, with an API-list-price fallback only when the field is missing or null. Fallbacks use the existing cached models.dev catalog or bundled rates at the event date, preserve Cursor's disjoint input/cache counters, and do not read native Codex custom pricing or refresh prices over the network. Reported zero remains zero; malformed, negative, nonfinite, or otherwise invalid costs stay unpriced and fail the same-model sum closed. Unknown models remain unpriced. Reported, estimated, and unpriced request counts remain visible even when a rejected cost invalidates a model total.
@@ -148,17 +151,19 @@ If Auto fetches usage with a cookie that the app still cannot confirm for the cu
 - Primary: plan usage percent (included plan).
 - Secondary: Cursor (Cursor models) usage percent.
 - Tertiary: Third Party usage percent.
-- Extra: Grok Bot usage from `get-sand-usage-status` when the account has a paid allowance or an unexpired trial. The current `includedLimitZero` field takes precedence over the older allowance flag. Exhausted active trials remain visible; missing, malformed, or expired trial dates do not grant an allowance. Grok Bot is not the semantic weekly window, so monthly Cursor Auto pace stays on the Cursor bar when this extra 7-day window is present. Paid 7-day Grok Bot extras still show weekly pace on that extra bar; trial extras without a recurring reset do not.
+- Extra: Grok Bot usage from `get-sand-usage-status` when the account has a paid allowance or an unexpired trial. The current `includedLimitZero` field takes precedence over the older allowance flag. Exhausted active trials remain visible; missing, malformed, or expired trial dates do not grant an allowance. Grok Bot is not the semantic weekly window, so monthly Cursor Auto pace stays on the Cursor bar when this extra 7-day window is present. Paid 7-day Grok Bot extras still show weekly pace on that extra bar; trial extras without a recurring reset do not. Paid Grok Bot allowances with a valid reset use the documented 7-day cadence regardless of `currentPeriodStart`, so pace covers the full week even when that field starts mid-week or is missing. Missing or malformed reset dates leave pace unavailable.
 - Provider cost: Extra usage USD. A capped individual budget wins; team accounts without a user cap use the shared team on-demand budget.
 - Reset: billing cycle end date for monthly bars; paid Grok Bot uses `nextResetTimestampUtc`, even if a trial-expiry field is also present. Trial-only allowances have no recurring reset or duration because trial expiration does not replenish quota.
 
 ## Menu-bar layout
 
-In the menu-bar layout editor, select the Cursor override and drag **Grok Bot %** from the usage palette
-onto a line, for example beside the icon. It follows the used/remaining preference and reads the same
-allowance as the card. The palette token and its rendered percentage disappear when the snapshot has no
-active Grok Bot allowance, including a zero included limit without an active trial. The saved placement
-remains and reappears when the allowance returns; Auto % continues to use Cursor's standard windows.
+In Icon and Percent mode, choose **Providers → Cursor → Menu bar metric → Grok Bot** to replace the
+ordinary percentage in Cursor's layout. This saves a Cursor-only override. The layout editor also offers
+**Grok Bot %** in the usage palette when an allowance is available, for layouts with multiple percentages.
+Both paths show the allowance's own label, for example `Grok Bot 42%`, and follow the used/remaining
+preference. A saved selection displays `Grok Bot –` when the reading is missing or unknown; a real zero
+displays `Grok Bot 0%` in used mode. Auto % continues to use Cursor's standard windows. Balance tokens
+remain independent, and the dropdown keeps its existing reset countdown and paid-weekly pace display.
 
 Named-extra selections are stored in V4 layout keys. A V3 projection omits them while preserving explicit
 reset-window selections for 0.60.x; V2/V1 projections remain available for older releases. An unchanged
@@ -191,3 +196,7 @@ fifty members. It requires consistent page-count metadata, full intermediate pag
 matching member. Missing completion metadata, duplicate matches, or unavailable, invalid, or incomplete responses
 preserve usage-summary behavior. Billing dates and extra/on-demand charges remain sourced from usage-summary;
 team response dates and other members' details are not retained. Caller cancellation still stops the fetch.
+
+## Cost reporting period
+
+The shared [cost reporting period](cost-reporting-periods.md) supports month-to-date in the pinned cost time zone. Cursor-metered spend and daily estimates use the same event window. Quota bars continue to follow Cursor’s billing-cycle start/end dates, which can fall mid-month.

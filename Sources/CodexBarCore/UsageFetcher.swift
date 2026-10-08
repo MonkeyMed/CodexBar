@@ -69,6 +69,11 @@ public struct RateWindow: Codable, Equatable, Sendable {
         }
     }
 
+    /// A synthetic placeholder has no measured quota value, even when its stored percent is zero.
+    public var measured: Self? {
+        self.isSyntheticPlaceholder ? nil : self
+    }
+
     public var remainingPercent: Double {
         max(0, 100 - self.usedPercent)
     }
@@ -153,11 +158,15 @@ public struct UsageSnapshot: Codable, Sendable {
     public let deepseekPlatformProfiles: [DeepSeekPlatformProfile]
     /// Live-only ownership proof; decoded usage cannot authorize browser balance retention.
     public let deepseekPlatformBalanceOwner: DeepSeekPlatformBalanceOwner?
+    /// Live-only ownership proof; a profile directory alone does not identify an account.
+    public let browserSessionOwner: ProviderBrowserSessionOwner?
     public let opencodegoUsage: OpenCodeGoUsageSnapshot?
     public let openAIAPIUsage: OpenAIAPIUsageSnapshot?
     public let codexResetCredits: CodexRateLimitResetCreditsSnapshot?
     /// Live-only display inventory. Grok redemption token identifiers are intentionally excluded.
     public let grokResetCredits: GrokRateLimitResetCreditsSnapshot?
+    /// Live-only display inventory. Claude grant identifiers are never decoded.
+    public let claudeResetCredits: ClaudeRateLimitResetCreditsSnapshot?
     public let mistralUsage: MistralUsageSnapshot?
     /// Retains an observed zero when a metered Copilot seat has no visible credit row.
     public let copilotMeteredZeroCredits: Bool
@@ -169,6 +178,8 @@ public struct UsageSnapshot: Codable, Sendable {
     public let commandCodeMonthlyGrantDepleted: Bool
     public let subscriptionExpiresAt: Date?
     public let subscriptionRenewsAt: Date?
+    public let subscriptionRenewsAtIsDateOnly: Bool
+    public let subscriptionExpiresAtIsDateOnly: Bool
     public let updatedAt: Date
     public let identity: ProviderIdentitySnapshot?
     public let dataConfidence: UsageDataConfidence
@@ -186,6 +197,8 @@ public struct UsageSnapshot: Codable, Sendable {
         case copilotMeteredZeroCredits
         case subscriptionExpiresAt
         case subscriptionRenewsAt
+        case subscriptionRenewsAtIsDateOnly
+        case subscriptionExpiresAtIsDateOnly
         case updatedAt
         case identity
         case dataConfidence
@@ -205,10 +218,12 @@ public struct UsageSnapshot: Codable, Sendable {
         deepseekDetailedUsageState: DeepSeekDetailedUsageState = .notRequested,
         deepseekPlatformProfiles: [DeepSeekPlatformProfile] = [],
         deepseekPlatformBalanceOwner: DeepSeekPlatformBalanceOwner? = nil,
+        browserSessionOwner: ProviderBrowserSessionOwner? = nil,
         opencodegoUsage: OpenCodeGoUsageSnapshot? = nil,
         openAIAPIUsage: OpenAIAPIUsageSnapshot? = nil,
         codexResetCredits: CodexRateLimitResetCreditsSnapshot? = nil,
         grokResetCredits: GrokRateLimitResetCreditsSnapshot? = nil,
+        claudeResetCredits: ClaudeRateLimitResetCreditsSnapshot? = nil,
         mistralUsage: MistralUsageSnapshot? = nil,
         copilotMeteredZeroCredits: Bool = false,
         commandCodeSubscriptionEnrichmentUnavailable: Bool = false,
@@ -216,6 +231,8 @@ public struct UsageSnapshot: Codable, Sendable {
         commandCodeMonthlyGrantDepleted: Bool = false,
         subscriptionExpiresAt: Date? = nil,
         subscriptionRenewsAt: Date? = nil,
+        subscriptionRenewsAtIsDateOnly: Bool = false,
+        subscriptionExpiresAtIsDateOnly: Bool = false,
         updatedAt: Date,
         identity: ProviderIdentitySnapshot? = nil,
         dataConfidence: UsageDataConfidence = .unknown)
@@ -233,10 +250,12 @@ public struct UsageSnapshot: Codable, Sendable {
         self.deepseekDetailedUsageState = deepseekDetailedUsageState
         self.deepseekPlatformProfiles = deepseekPlatformProfiles
         self.deepseekPlatformBalanceOwner = deepseekPlatformBalanceOwner
+        self.browserSessionOwner = browserSessionOwner
         self.opencodegoUsage = opencodegoUsage
         self.openAIAPIUsage = openAIAPIUsage
         self.codexResetCredits = codexResetCredits
         self.grokResetCredits = grokResetCredits
+        self.claudeResetCredits = claudeResetCredits
         self.mistralUsage = mistralUsage
         self.copilotMeteredZeroCredits = copilotMeteredZeroCredits
         self.commandCodeSubscriptionEnrichmentUnavailable = commandCodeSubscriptionEnrichmentUnavailable
@@ -244,6 +263,8 @@ public struct UsageSnapshot: Codable, Sendable {
         self.commandCodeMonthlyGrantDepleted = commandCodeMonthlyGrantDepleted
         self.subscriptionExpiresAt = subscriptionExpiresAt
         self.subscriptionRenewsAt = subscriptionRenewsAt
+        self.subscriptionRenewsAtIsDateOnly = subscriptionRenewsAtIsDateOnly
+        self.subscriptionExpiresAtIsDateOnly = subscriptionExpiresAtIsDateOnly
         self.updatedAt = updatedAt
         self.identity = identity
         self.dataConfidence = dataConfidence
@@ -263,11 +284,11 @@ public struct UsageSnapshot: Codable, Sendable {
 
     public func withGrokResetCredits(_ resetCredits: GrokRateLimitResetCreditsSnapshot?) -> UsageSnapshot {
         self.replacing(
-            details: .value(Self.removingGrokResetCreditDetails(from: self.details)),
+            details: .value(Self.removingLiveResetCreditDetails(from: self.details)),
             grokResetCredits: .value(resetCredits))
     }
 
-    private static func removingGrokResetCreditDetails(
+    private static func removingLiveResetCreditDetails(
         from details: [ProviderDetailSection]) -> [ProviderDetailSection]
     {
         details.compactMap { section -> ProviderDetailSection? in
@@ -277,10 +298,17 @@ public struct UsageSnapshot: Codable, Sendable {
         }
     }
 
-    public func withSubscriptionMetadata(expiresAt: Date?, renewsAt: Date?) -> UsageSnapshot {
+    public func withSubscriptionMetadata(
+        expiresAt: Date?,
+        renewsAt: Date?,
+        expiresAtIsDateOnly: Bool = false,
+        renewsAtIsDateOnly: Bool = false) -> UsageSnapshot
+    {
         self.replacing(
             subscriptionExpiresAt: .value(expiresAt),
-            subscriptionRenewsAt: .value(renewsAt))
+            subscriptionRenewsAt: .value(renewsAt),
+            subscriptionRenewsAtIsDateOnly: .value(renewsAtIsDateOnly),
+            subscriptionExpiresAtIsDateOnly: .value(expiresAtIsDateOnly))
     }
 
     public func with(primary: RateWindow?, secondary: RateWindow?) -> UsageSnapshot {
@@ -324,19 +352,21 @@ public struct UsageSnapshot: Codable, Sendable {
         self.costUsage = nil // Live-only provider history; refresh from the authoritative source.
         let details = try container.decodeIfPresent([ProviderDetailSection].self, forKey: .details) ?? []
         try ProviderDetailSection.validateSections(details)
-        // Provider-specific by design: only native Grok snapshots used this legacy reset-credit detail row.
-        self.details = decodedIdentity?.providerID == .grok
-            ? Self.removingGrokResetCreditDetails(from: details)
+        // Provider-specific by design: native Grok and Claude reset-credit rows are live-only inventory.
+        self.details = decodedIdentity?.providerID == .grok || decodedIdentity?.providerID == .claude
+            ? Self.removingLiveResetCreditDetails(from: details)
             : details
         self.deepseekDetailedUsageState = .notRequested // Live-only fetch state
         self.deepseekPlatformProfiles = [] // Live-only browser profile catalog
         self.deepseekPlatformBalanceOwner = nil // Live-only balance ownership
+        self.browserSessionOwner = nil // Live-only browser session ownership
         self.opencodegoUsage = nil // Not persisted, fetched fresh each time
         self.openAIAPIUsage = try container.decodeIfPresent(OpenAIAPIUsageSnapshot.self, forKey: .openAIAPIUsage)
         self.codexResetCredits = try container.decodeIfPresent(
             CodexRateLimitResetCreditsSnapshot.self,
             forKey: .codexResetCredits)
         self.grokResetCredits = nil // Live-only inventory; refresh without persisting redemption state.
+        self.claudeResetCredits = nil // Live-only inventory; a reset used on claude.ai must not reappear.
         self.mistralUsage = try container.decodeIfPresent(MistralUsageSnapshot.self, forKey: .mistralUsage)
         self.copilotMeteredZeroCredits = try container
             .decodeIfPresent(Bool.self, forKey: .copilotMeteredZeroCredits) ?? false
@@ -345,6 +375,12 @@ public struct UsageSnapshot: Codable, Sendable {
         self.commandCodeMonthlyGrantDepleted = false // Live-only fetch state
         self.subscriptionExpiresAt = try container.decodeIfPresent(Date.self, forKey: .subscriptionExpiresAt)
         self.subscriptionRenewsAt = try container.decodeIfPresent(Date.self, forKey: .subscriptionRenewsAt)
+        self.subscriptionRenewsAtIsDateOnly = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .subscriptionRenewsAtIsDateOnly) ?? false
+        self.subscriptionExpiresAtIsDateOnly = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .subscriptionExpiresAtIsDateOnly) ?? false
         self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         if let dataConfidence = try container.decodeIfPresent(String.self, forKey: .dataConfidence) {
             self.dataConfidence = UsageDataConfidence(rawValue: dataConfidence) ?? .unknown
@@ -373,6 +409,8 @@ public struct UsageSnapshot: Codable, Sendable {
         }
         try container.encodeIfPresent(self.subscriptionExpiresAt, forKey: .subscriptionExpiresAt)
         try container.encodeIfPresent(self.subscriptionRenewsAt, forKey: .subscriptionRenewsAt)
+        if self.subscriptionRenewsAtIsDateOnly { try container.encode(true, forKey: .subscriptionRenewsAtIsDateOnly) }
+        if self.subscriptionExpiresAtIsDateOnly { try container.encode(true, forKey: .subscriptionExpiresAtIsDateOnly) }
         try container.encode(self.updatedAt, forKey: .updatedAt)
         try container.encodeIfPresent(self.identity, forKey: .identity)
         if self.dataConfidence != .unknown {
@@ -418,6 +456,12 @@ public struct UsageSnapshot: Codable, Sendable {
     public var hasRateLimitWindows: Bool {
         self.primary != nil || self.secondary != nil || self.tertiary != nil ||
             !(self.extraRateWindows?.isEmpty ?? true)
+    }
+
+    public var measuredRateWindows: [RateWindow] {
+        let windows = [self.primary, self.secondary, self.tertiary]
+            + (self.extraRateWindows ?? []).filter(\.usageKnown).map(\.window)
+        return windows.compactMap { $0?.measured }
     }
 
     public func detailRow(label: String) -> ProviderDetailSection.Row? {
@@ -515,7 +559,7 @@ public struct UsageSnapshot: Codable, Sendable {
         return true
     }
 
-    enum Replacement<Value> {
+    package enum Replacement<Value> {
         case unchanged
         case value(Value)
 
@@ -527,19 +571,23 @@ public struct UsageSnapshot: Codable, Sendable {
         }
     }
 
-    func replacing(
+    package func replacing(
         primary: Replacement<RateWindow?> = .unchanged,
         secondary: Replacement<RateWindow?> = .unchanged,
         tertiary: Replacement<RateWindow?> = .unchanged,
         extraRateWindows: Replacement<[NamedRateWindow]?> = .unchanged,
         providerCost: Replacement<ProviderCostSnapshot?> = .unchanged,
+        costUsage: Replacement<CostUsageTokenSnapshot?> = .unchanged,
         details: Replacement<[ProviderDetailSection]> = .unchanged,
         deepseekDetailedUsageState: Replacement<DeepSeekDetailedUsageState> = .unchanged,
         deepseekPlatformProfiles: Replacement<[DeepSeekPlatformProfile]> = .unchanged,
+        browserSessionOwner: Replacement<ProviderBrowserSessionOwner?> = .unchanged,
         codexResetCredits: Replacement<CodexRateLimitResetCreditsSnapshot?> = .unchanged,
         grokResetCredits: Replacement<GrokRateLimitResetCreditsSnapshot?> = .unchanged,
         subscriptionExpiresAt: Replacement<Date?> = .unchanged,
         subscriptionRenewsAt: Replacement<Date?> = .unchanged,
+        subscriptionRenewsAtIsDateOnly: Replacement<Bool> = .unchanged,
+        subscriptionExpiresAtIsDateOnly: Replacement<Bool> = .unchanged,
         identity: Replacement<ProviderIdentitySnapshot?> = .unchanged,
         dataConfidence: Replacement<UsageDataConfidence> = .unchanged) -> UsageSnapshot
     {
@@ -549,15 +597,17 @@ public struct UsageSnapshot: Codable, Sendable {
             tertiary: tertiary.resolving(self.tertiary),
             extraRateWindows: extraRateWindows.resolving(self.extraRateWindows),
             providerCost: providerCost.resolving(self.providerCost),
-            costUsage: self.costUsage,
+            costUsage: costUsage.resolving(self.costUsage),
             details: details.resolving(self.details),
             deepseekDetailedUsageState: deepseekDetailedUsageState.resolving(self.deepseekDetailedUsageState),
             deepseekPlatformProfiles: deepseekPlatformProfiles.resolving(self.deepseekPlatformProfiles),
             deepseekPlatformBalanceOwner: self.deepseekPlatformBalanceOwner,
+            browserSessionOwner: browserSessionOwner.resolving(self.browserSessionOwner),
             opencodegoUsage: self.opencodegoUsage,
             openAIAPIUsage: self.openAIAPIUsage,
             codexResetCredits: codexResetCredits.resolving(self.codexResetCredits),
             grokResetCredits: grokResetCredits.resolving(self.grokResetCredits),
+            claudeResetCredits: self.claudeResetCredits,
             mistralUsage: self.mistralUsage,
             copilotMeteredZeroCredits: self.copilotMeteredZeroCredits,
             commandCodeSubscriptionEnrichmentUnavailable: self.commandCodeSubscriptionEnrichmentUnavailable,
@@ -565,6 +615,10 @@ public struct UsageSnapshot: Codable, Sendable {
             commandCodeMonthlyGrantDepleted: self.commandCodeMonthlyGrantDepleted,
             subscriptionExpiresAt: subscriptionExpiresAt.resolving(self.subscriptionExpiresAt),
             subscriptionRenewsAt: subscriptionRenewsAt.resolving(self.subscriptionRenewsAt),
+            subscriptionRenewsAtIsDateOnly: subscriptionRenewsAtIsDateOnly
+                .resolving(self.subscriptionRenewsAtIsDateOnly),
+            subscriptionExpiresAtIsDateOnly: subscriptionExpiresAtIsDateOnly
+                .resolving(self.subscriptionExpiresAtIsDateOnly),
             updatedAt: self.updatedAt,
             identity: identity.resolving(self.identity),
             dataConfidence: dataConfidence.resolving(self.dataConfidence))
@@ -640,29 +694,23 @@ public enum UsageLimitsAvailability: Equatable, Sendable {
         // Provider-specific by design: Claude error text, Codex identity, and Doubao/Antigravity identities signal
         // whether a successful payload actually contains subscription limits.
         if provider == .claude {
-            guard snapshot == nil else { return .available }
+            if let snapshot {
+                return snapshot.primary?.isSyntheticPlaceholder == true && snapshot.measuredRateWindows.isEmpty
+                    ? .unavailable : .available
+            }
             return ClaudeStatusProbe.isSubscriptionQuotaUnavailableDescription(lastErrorDescription)
                 ? .unavailable
                 : .available
         }
 
-        if provider == .doubao || provider == .antigravity {
-            guard let snapshot,
-                  snapshot.identity(for: provider.instanceID) != nil
-            else {
-                return .available
-            }
-            return snapshot.hasRateLimitWindows ? .available : .unavailable
-        }
-
-        guard provider == .codex else { return .available }
+        guard provider == .codex || provider == .doubao || provider == .antigravity else { return .available }
 
         if let snapshot {
             guard snapshot.identity(for: provider.instanceID) != nil else { return .available }
             return snapshot.hasRateLimitWindows ? .available : .unavailable
         }
 
-        guard UsageError.isNoRateLimitsFoundDescription(lastErrorDescription),
+        guard provider == .codex, UsageError.isNoRateLimitsFoundDescription(lastErrorDescription),
               account?.hasIdentity == true
         else {
             return .available
@@ -1118,18 +1166,14 @@ private final class CodexRPCClient: @unchecked Sendable {
 // MARK: - Public fetcher used by the app
 
 public struct UsageFetcher: Sendable {
-    private let environment: [String: String]
+    @ProcessEnvironment private var environment: [String: String]
     private let initializeTimeoutSeconds: TimeInterval
     private let requestTimeoutSeconds: TimeInterval
     private let codexExecutableResolver: CodexExecutableResolver
     private let codexArguments: [String]
 
     public init(environment: [String: String] = ProcessInfo.processInfo.environment) {
-        self.environment = environment
-        self.initializeTimeoutSeconds = 8.0
-        self.requestTimeoutSeconds = 3.0
-        self.codexExecutableResolver = defaultCodexExecutableResolver
-        self.codexArguments = ["-s", "read-only", "-a", "never", "app-server"]
+        self.init(environment: environment, initializeTimeoutSeconds: 8.0, requestTimeoutSeconds: 3.0)
     }
 
     init(

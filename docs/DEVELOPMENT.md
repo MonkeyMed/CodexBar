@@ -34,6 +34,19 @@ read_when:
 4. **Optional file log**: enable Debug → Logging → "Enable file logging" to write
    `~/Library/Logs/CodexBar/CodexBar.log` (verbosity defaults to "Verbose")
 
+## Swift Toolchain Compatibility
+
+The package supports Swift 6.2, including Xcode 26.3 on macOS 15. CI's
+`swift-build-macos-compatibility` job builds the app, CLI, and all test targets
+with that Xcode version using `swift build --build-tests`, without running them.
+It uses the existing macOS path gate, including every Swift change, and runs on
+draft PRs too. The aggregate `lint-build-test` gate requires a successful build
+when applicable; docs-only changes may skip it. Runtime tests remain on newer Xcode.
+
+Keep large initializer and `#expect` expressions simple: bind intermediate values
+to explicitly typed locals when the Swift 6.2 type checker struggles. Use
+`ProviderColor(hex:)` for provider colors instead of arithmetic inside spec initializers.
+
 ## Keychain Prompts (Development)
 
 ### First Launch After Fresh Clone
@@ -141,12 +154,46 @@ items. AppKit exposes no public factory taking an autosave name, so zero-length 
 manager enumerates an item inside AppKit's factory. These tests also do not establish the writer of a position that
 changes after launch; recurring placement and Bartender UUID behavior still require isolated runtime evidence.
 
-Runtime removal and visibility changes preserve the current saved position if AppKit clears it. This also covers
-status-menu Quit, which removes items before AppKit termination begins. The deterministic tests use in-memory
-defaults; native proof must use a signed, isolated app with a visibly hosted item and exercise removal/recreation,
-hide/show, and removal before termination. This does not diagnose older out-of-range placement reports.
+Runtime removal and visibility changes preserve the current saved position if AppKit clears it. Runtime removal
+hides the item under its stable name, removes it with that name intact, then retires the autosave identity to prevent
+later cleanup from clearing the restored position. This includes startup visibility recovery when Control Center
+has not hosted the items yet: resetting a visible item's name before removal exposes a new automatic identity to
+menu bar managers. Replacement items keep the existing `codexbar-merged` and `codexbar-<provider>` names. During
+`applicationWillTerminate`, removal instead keeps the identity intact: renaming a host immediately before exit can
+leave a blank Control Center slot on macOS 26.6.2. Status-menu Quit requests termination after menu tracking unwinds
+and leaves cleanup to that callback; shutdown detaches menus without hiding or renaming the items before removal.
+The deterministic tests use in-memory defaults, an injected recording status bar, and a hosting probe that misses
+the first startup sample to check recovery and teardown ordering, identity, visibility, and placement restoration.
+They compare already-hosted relaunches with delayed hosting; they do not reproduce Sparkle or Bartender's UUID store.
+Native proof must use a signed, isolated app with visibly hosted
+merged and provider items: record the exact old window IDs, quit normally, confirm those windows disappear, then
+relaunch and check custom positions. Also exercise runtime removal/recreation and hide/show. Unit tests cannot prove
+Control Center host removal or placement after process exit. This does not diagnose older out-of-range placement reports.
 
 ### Run Tests Only
+
+The shell test runners and all Make test targets source `Scripts/test_environment.sh` before launching Swift.
+The Linux CI test step sources it too. It removes exported variables whose names contain `TOKEN`, `KEY`, `SECRET`,
+`PASSWORD`, `PASSWD`, `WEBHOOK`, `CREDENTIAL`, `COOKIE`, `PRIVATE`, or `_PAT`, ignoring case. Explicit non-secret
+exceptions preserve `CODEXBAR_ALLOW_TEST_KEYCHAIN_ACCESS`, `CODEXBAR_SUPPRESS_TEST_KEYCHAIN_ACCESS`,
+`CODEXBAR_DISABLE_KEYCHAIN_ACCESS`, and `CODEXBAR_USE_LOCAL_SWEETCOOKIEKIT`. Standard build and loader search paths
+(`LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH`, `DYLD_FRAMEWORK_PATH`, `LIBRARY_PATH`, and `PKG_CONFIG_PATH`) are also preserved:
+their `_PATH` suffix otherwise matches `_PAT`. Other matching variables, including `CODEXBAR_*` credentials, are removed.
+Use synthetic dictionaries or set synthetic sentinels inside fixtures; never depend on inherited real credentials.
+For direct `swift test`, source the script in a Bash subshell first. This does not authorize live account tests.
+
+`@ProcessEnvironment` provides count-only descriptions and reflection for stored process-environment dictionaries
+throughout the app, CLI, provider contexts, and session scanners. Use it on every stored environment, including
+captured configuration structs and optional dictionaries. Optional storage preserves `nil` versus an empty map;
+equality still compares the original contents. Keep formerly immutable properties `private(set)`.
+Explicit dictionary access still returns the original values for provider/subprocess use; never log that dictionary.
+Harness scrubbing remains essential and does not replace a review of debug output before sharing it.
+
+`ProcessEnvironmentStorageTests` scans shipped Swift in `Sources/` and `WidgetExtension/` for environment-named
+dictionary declarations (including optional, multiline, and `Dictionary<String, String>` spellings). This lexical
+tripwire checks locals too; its exact-source allowlist documents only transient dictionaries and rejects stale or
+duplicate exceptions. Computed getters and function parameters are not storage. Inferred types, aliases, differently
+named dictionaries, and explicit dictionary logging still require code review; this is not a Swift dataflow analyzer.
 
 Lint tools are installed at repository-pinned versions by `Scripts/install_lint_tools.sh`, with archive checksums
 verified before installation. TypeScript 7 installs its native package for the running Node platform and architecture
@@ -477,6 +524,19 @@ factory tests; exclude those when running a nonpersistent-only focused check.
 
 ### CI Aggregate Contract
 
+`make check` and portable CI lint run `node Scripts/check-package-resolved.mjs` and its synthetic regression tests
+(`node --test Scripts/test_package_resolved.mjs`). This offline, read-only check compares every package identity,
+revision, and version in the root and widget workspace `Package.resolved` files, including missing or extra pins.
+Pin order and workspace-specific `originHash` values do not affect the comparison. After changing dependencies,
+resolve the widget workspace from the repository root and commit both resolved files together:
+
+```bash
+xcodebuild -resolvePackageDependencies -project WidgetExtension/CodexBarWidgetExtension.xcodeproj
+```
+
+The check names each drifted package and prints this repair command before packaging can fail with an out-of-date
+resolved file when automatic resolution is disabled.
+
 The `lint-build-test` check in `.github/workflows/ci.yml` keeps its existing name and requires successful lint,
 change detection, and the full `build-linux-cli` glibc matrix (x86_64 and ARM64 build, tests, and smoke checks).
 Glibc Linux has no path or draft skip: failure, cancellation, skipped, empty, missing, or unknown matrix results
@@ -594,3 +654,58 @@ defaults delete com.steipete.codexbar debugMainThreadHangWatchdog
 - Parallel provider fetches
 - First failure can be suppressed when prior data exists
 - WidgetKit snapshot for macOS widgets
+
+### macOS direct test groups
+
+`make test` remains serial by default. Invoke
+`./Scripts/test.sh --direct-workers 4` to request up to eight isolated group workers locally.
+SwiftPM still builds and discovers the complete inventory. Before launch, the adapter enumerates
+both XCTest and Swift Testing using the selected Xcode toolchain helpers and requires an exact
+inventory match, including duplicate detection. An inventory mismatch fails the run before any
+group executes. Local runs with missing helpers, unsupported toolchains, or Linux retain the serial
+SwiftPM path with a diagnostic. On CI, requesting direct workers requires a verified direct runtime:
+capability failures also fail the job instead of falling back to serial execution.
+
+Hosted macOS CI explicitly uses two serial SwiftPM shards, retaining the 75-minute test step and
+90-minute job limits. This avoids a third cold build while direct execution on Xcode 26.6 remains
+unverified after a helper SIGTRAP. A five-minute, nonblocking direct smoke test runs one group on
+shard zero after the complete serial shard passes; it is diagnostic evidence, not coverage or
+throughput proof. Both modes print ordered selection groups and timing summaries.
+
+The adapter includes both public and private platform framework search paths and disables Swift
+Testing during XCTest discovery, matching SwiftPM's launcher. Probe failures print the helper,
+exit status or signal, and redacted stdout/stderr. On CI, signal failures also wait up to five
+seconds for fresh helper crash reports in the original and temporary homes. The workflow collects
+fresh test crash reports again after failures, including nonblocking smoke failures. Credential
+values and local home identities are redacted; unrelated process reports are excluded.
+
+Each group has a fresh process and temporary `HOME` and `CFFIXED_USER_HOME`, with the existing credential
+and session-file isolation, Keychain suppression, timeout, retry, and descendant cleanup.
+Test output is buffered per group. A direct runtime failure after execution begins fails the run;
+it does not silently rerun the suite through a different runtime. This opt-in adapter depends on
+SwiftPM's toolchain helper contract and needs compatibility validation when updating Xcode.
+
+`--swift-command /path/to/swift-wrapper` works when the wrapper forwards `-print-target-info`
+unchanged to the selected Xcode Swift compiler and supports `build --show-bin-path`. The runner
+queries the wrapper's products directory; a different compiler/target or command prefix arguments
+are rejected (local serial fallback, CI failure). For a host requiring the native build backend,
+use the same wrapper for serial and direct comparisons:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+case "${1:-}" in
+  test|build)
+    subcommand="$1"
+    shift
+    exec /usr/bin/xcrun swift "$subcommand" --build-system native --jobs 4 -Xswiftc -gnone "$@"
+    ;;
+  *) exec /usr/bin/xcrun swift "$@" ;;
+esac
+```
+
+Save it as an executable file, then invoke
+`./Scripts/test.sh --swift-command /path/to/swift-wrapper --direct-workers 4`.
+Wrappers may add build options; test-selection or runtime-environment changes inside a wrapper
+cannot be reproduced by direct launch and are unsupported. Live/opt-in tests remain disabled by
+their existing test conditions; this flag does not enable them.

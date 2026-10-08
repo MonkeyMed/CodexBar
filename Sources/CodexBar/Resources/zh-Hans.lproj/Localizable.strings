@@ -104,6 +104,8 @@
 "Average (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))" = "平均（\\(metadata.sessionLabel) + \\(metadata.weeklyLabel)）";
 "Avoid Keychain prompts" = "避免钥匙串提示";
 "Balance" = "余额";
+"Cloud credits" = "云端额度";
+"Expired" = "已过期";
 "Battery Saver" = "省电模式";
 "Bordered" = "带边框";
 "Build" = "构建";
@@ -506,6 +508,7 @@
 "cost_summary_style_inline_help" = "直接在主菜单中显示费用摘要。";
 "cost_summary_style_submenu_help" = "改为显示详细的费用子菜单。";
 "cost_summary_style_both_help" = "同时显示主菜单摘要和详细的费用子菜单。";
+"Month to date" = "本月至今";
 "cost_history_window_title" = "历史窗口";
 "cost_history_window_help" = "设置菜单中显示多少天的本地使用日志。";
 "cost_history_days_title" = "历史窗口：%d 天";
@@ -809,7 +812,6 @@
 "No local data found" = "未找到本地数据";
 "Credits unavailable; keep Codex running to refresh." = "额度暂不可用；请保持 Codex 运行后再刷新。";
 "No available fetch strategy for minimax." = "没有可用的 MiniMax 抓取策略。";
-"No Cursor session found. Please log in to cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX, or Edge Canary. If you use Safari, grant CodexBar Full Disk Access in System Settings ▸ Privacy & Security. You can also sign in to Cursor from the CodexBar menu (Add / switch account)." = "未找到 Cursor 会话。请在 Safari、Chrome、Microsoft Edge、Brave、Arc、Dia、ChatGPT Atlas、Chromium、Helium、Vivaldi、Yandex Browser、Firefox、Zen、Colibri、Sidekick、Opera、Opera GX 或 Edge Canary 中登录 cursor.com。若使用 Safari，请在“系统设置 ▸ 隐私与安全性”中授予 CodexBar“完全磁盘访问权限”。你也可以在 CodexBar 菜单中登录 Cursor（添加/切换账户）。";
 "No OpenCode session cookies found in browsers." = "在浏览器中未找到 OpenCode 会话 Cookie。";
 "No available fetch strategy for %@." = "%@ 暂无可用的获取策略。";
 "Today" = "今日";
@@ -928,6 +930,12 @@
 "Copied" = "已复制";
 "Managed by Homebrew" = "由 Homebrew 管理";
 "Copy update command" = "复制更新命令";
+"Update to %@" = "更新到 %@";
+"CodexBar %@ is available" = "CodexBar %@ 已推出";
+"CodexBar is up to date" = "CodexBar 已是最新版本";
+"Checking for updates…" = "正在检查更新…";
+"Updating with Homebrew…" = "正在通过 Homebrew 更新…";
+"Homebrew update failed. You can run this command in Terminal instead:" = "Homebrew 更新失败。你也可以在终端中运行此命令：";
 "Copy error" = "复制错误";
 "Copy path" = "复制路径";
 "Extra usage spent" = "额外用量支出";
@@ -1047,6 +1055,11 @@
 "session_depleted_notification_body" = "剩余 0%。可用时会通知你。";
 "session_restored_notification_title" = "%@ 会话已恢复";
 "session_restored_notification_body" = "会话额度已重新可用。";
+"limit_reset_notifications_title" = "额度重置通知";
+"limit_reset_notifications_subtitle" = "会话或每周额度重置时，通知是哪个提供商的哪项额度。";
+"limit_reset_notification_title" = "%1$@ %2$@额度已重置";
+"limit_reset_notification_body" = "新额度已可用。";
+"limit_reset_notification_body_with_account" = "账户 %@。新额度已可用。";
 "quota_warning_notification_title" = "%1$@ 的 %2$@ 额度偏低";
 "quota_warning_notification_body" = "剩余 %1$@。已达到 %2$d%% 的 %3$@ 预警阈值。";
 "quota_warning_notification_body_with_account" = "账户 %1$@。剩余 %2$@。已达到 %3$d%% 的 %4$@ 预警阈值。";
@@ -1353,6 +1366,9 @@
 "Cache write" = "缓存写入";
 "Reasoning" = "推理";
 "Sessions" = "会话";
+"Independent chats" = "独立聊天";
+"Independent chat" = "独立聊天";
+"Chat %d" = "聊天 %d";
 "Projects" = "项目";
 "Plan metered" = "套餐计量";
 "List-price equivalent" = "目录价等值";
@@ -1416,7 +1432,6 @@
 "menu_bar_layout_gap_tight" = "紧凑";
 "menu_bar_layout_gap_regular" = "常规";
 "menu_bar_layout_vertical_adjustment" = "垂直调整";
-"menu_bar_layout_keyboard_hint" = "Delete 键会移除所选项目";
 "menu_bar_layout_sample_account" = "帐户";
 "menu_bar_layout_sample_runs_out" = "周五用尽";
 "menu_bar_layout_token_icon" = "图标";
@@ -1486,6 +1501,8 @@
 
 "Cumulative" = "累计";
 "Token activity" = "Token 活动";
+"Earlier activity" = "更早记录";
+"More recent activity" = "最近记录";
 "View" = "视图";
 "in the last year" = "近一年";
 "No activity in the last 12 months" = "近 12 个月暂无活动";
@@ -1634,7 +1651,34 @@
 "account_widgets_title" = "为小组件保持账户更新";
 "account_widgets_description" = "在每个 Account Usage 小组件中选择一个账户。每个服务商最多刷新六个账户。";
 
+/* Spend time zone */
+"Statistics time zone" = "统计时区";
+"Use Mac's current time zone" = "使用电脑当前时区";
+"Daily usage uses a fixed time zone. Changing it may move usage to a different day." = "每日用量按固定时区统计。更改时区后，部分用量可能会归入不同的日期。";
+
 /* Antigravity local cost estimates */
 "antigravity_cost_estimate_hint" = "本地用量 × 公开 API 价格 · 并非 Antigravity 账单或额度";
 "antigravity_quota_window_note" = "窗口费用涵盖所有模型 · 所示窗口为最受限的模型系列";
 "antigravity_no_priced_token_history" = "没有可计价的 Antigravity 令牌历史记录。";
+"Supported browsers: %@. Use Manual for other browsers." = "支持的浏览器：%@。其他浏览器请使用“手动”模式。";
+"Paste the Cookie header from a Chrome request to www.workbuddy.cn/profile/plans-usage." = "粘贴 Chrome 向 www.workbuddy.cn/profile/plans-usage 发送的请求中的 Cookie 标头。";
+"Reserved" = "已预留";
+
+/* Selected browser profile */
+"Browser profile" = "浏览器配置文件";
+"Unavailable profile: %@" = "配置文件不可用：%@";
+"Read only the selected %@ profile. Accounts are never selected automatically." = "仅读取所选的 %@ 配置文件。绝不会自动选择账户。";
+
+// Spend chart navigation and inspection
+"Recorded spend" = "已记录支出";
+"Highest recorded spend" = "最高已记录支出";
+"Previous day" = "前一天";
+"Next day" = "后一天";
+"Click to isolate a source. Click again to show all." = "点击单独查看此来源，再次点击显示全部。";
+"Recorded hourly spend" = "已记录的小时支出";
+"Highest spend" = "最高支出";
+"Models for this day" = "查看当天模型";
+
+"Click a bar to explore. Use the menu below for exact amounts." = "点击柱形逐层查看，下方菜单可查询具体金额。";
+/* Provider menu bar color */
+"Color by provider" = "按服务商着色";

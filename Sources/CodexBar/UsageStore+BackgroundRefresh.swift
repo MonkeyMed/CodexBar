@@ -75,17 +75,9 @@ extension UsageStore {
         self.tokenFetchFailureCooldowns.removeValue(forKey: provider.instanceID)
     }
 
-    func providerCleanupRevision(for provider: UsageProvider) -> UInt64 {
-        self.providerCleanupRevisions[provider.instanceID, default: 0]
-    }
-
-    func providerCleanupRevisionIsCurrent(_ revision: UInt64, for provider: UsageProvider) -> Bool {
-        self.providerCleanupRevision(for: provider) == revision
-    }
-
     func providerPublicationRevision(for provider: UsageProvider) -> ProviderPublicationRevision {
         ProviderPublicationRevision(
-            cleanupRevision: self.providerCleanupRevision(for: provider),
+            cleanupRevision: self.providerCleanupRevisions[provider.instanceID, default: 0],
             enablementRevision: self.settings.providerEnablementRevision(for: provider))
     }
 
@@ -93,12 +85,12 @@ extension UsageStore {
         _ revision: ProviderPublicationRevision,
         for provider: UsageProvider) -> Bool
     {
-        self.providerCleanupRevisionIsCurrent(revision.cleanupRevision, for: provider) &&
-            revision.enablementRevision == self.settings.providerEnablementRevision(for: provider)
+        self.providerPublicationRevision(for: provider) == revision
     }
 
     func clearDisabledProviderState(enabledProviders: Set<ProviderInstanceID>) {
         for provider in UsageProvider.allCases where !enabledProviders.contains(provider.instanceID) {
+            self.retireCredentialNotifications(provider: provider)
             if self.currentProviderRefreshAllowsDisabledPublication(provider) {
                 self.clearProviderRuntimeState(provider)
             } else {

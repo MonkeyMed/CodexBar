@@ -100,6 +100,8 @@
 "Average (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))" = "Trung bình (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))";
 "Avoid Keychain prompts" = "Tránh Keychain lời nhắc";
 "Balance" = "Số dư";
+"Cloud credits" = "Tín dụng đám mây";
+"Expired" = "Đã hết hạn";
 "Battery Saver" = "Trình tiết kiệm pin";
 "Bordered" = "Có viền";
 "Build" = "Xây dựng";
@@ -494,6 +496,7 @@
 "cost_summary_style_inline_help" = "Hiển thị tóm tắt chi phí trực tiếp trong menu chính.";
 "cost_summary_style_submenu_help" = "Thay vào đó hiển thị menu con Chi phí chi tiết.";
 "cost_summary_style_both_help" = "Hiển thị cả tóm tắt menu chính và menu con Chi phí chi tiết.";
+"Month to date" = "Từ đầu tháng đến nay";
 "cost_history_window_title" = "Cửa sổ lịch sử";
 "cost_history_window_help" = "Đặt số ngày nhật ký sử dụng cục bộ xuất hiện trong menu.";
 "cost_history_days_title" = "Cửa sổ lịch sử: %d ngày";
@@ -536,6 +539,11 @@
 "session_depleted_notification_body" = "còn lại 0%. Sẽ thông báo khi có lại.";
 "session_restored_notification_title" = "%@ phiên đã được khôi phục";
 "session_restored_notification_body" = "Phiên Hạn mức đã có sẵn trở lại.";
+"limit_reset_notifications_title" = "Thông báo đặt lại";
+"limit_reset_notifications_subtitle" = "Cho biết nhà cung cấp và khung nào được đặt lại khi giới hạn phiên hoặc hàng tuần được đặt lại.";
+"limit_reset_notification_title" = "%1$@: giới hạn %2$@ đã được đặt lại";
+"limit_reset_notification_body" = "Hạn mức mới đã sẵn sàng.";
+"limit_reset_notification_body_with_account" = "Tài khoản %@. Hạn mức mới đã sẵn sàng.";
 "quota_warning_warn_at" = "Cảnh báo ở";
 "quota_warning_global_threshold_subtitle" = "Tỷ lệ phần trăm còn lại cho phiên và thời lượng hàng tuần trừ khi Nhà cung cấp ghi đè chúng.";
 "quota_warning_sound" = "Phát âm thanh thông báo";
@@ -840,7 +848,6 @@
 "No local data found" = "Không tìm thấy dữ liệu cục bộ";
 "Credits unavailable; keep Codex running to refresh." = "Không có tín dụng; giữ Codex chạy để làm mới.";
 "No available fetch strategy for minimax." = "Không có chiến lược tìm nạp nào cho minimax.";
-"No Cursor session found. Please log in to cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX, or Edge Canary. If you use Safari, grant CodexBar Full Disk Access in System Settings ▸ Privacy & Security. You can also sign in to Cursor from the CodexBar menu (Add / switch account)." = "Không tìm thấy phiên Con trỏ. Vui lòng đăng nhập vào con trỏ.com bằng Safari , Chrome , Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chrome, Helium, Vivaldi, Yandex Browser, Firefox , Zen, Colibri, Sidekick, Opera, Opera GX hoặc Edge Canary. Nếu bạn sử dụng Safari , hãy cấp cho CodexBar Quyền truy cập toàn bộ đĩa trong Hệ thống Cài đặt ▸ Quyền riêng tư & Bảo mật. Bạn cũng có thể đăng nhập vào Cursor từ menu CodexBar (Thêm/chuyển đổi tài khoản).";
 "No OpenCode session cookies found in browsers." = "Không tìm thấy cookie phiên OpenCode trong trình duyệt.";
 "No available fetch strategy for %@." = "Không có chiến lược tìm nạp nào cho %@ .";
 "Today" = "Hôm nay";
@@ -955,6 +962,12 @@
 "Copied" = "Đã sao chép";
 "Managed by Homebrew" = "Được quản lý bằng Homebrew";
 "Copy update command" = "Sao chép lệnh cập nhật";
+"Update to %@" = "Cập nhật lên %@";
+"CodexBar %@ is available" = "Đã có CodexBar %@";
+"CodexBar is up to date" = "CodexBar đã được cập nhật";
+"Checking for updates…" = "Đang kiểm tra bản cập nhật…";
+"Updating with Homebrew…" = "Đang cập nhật bằng Homebrew…";
+"Homebrew update failed. You can run this command in Terminal instead:" = "Cập nhật bằng Homebrew không thành công. Bạn có thể chạy lệnh này trong Terminal:";
 "Copy error" = "Lỗi sao chép";
 "Copy path" = "Sao chép đường dẫn";
 "Extra usage spent" = "Thêm Mức sử dụng đã chi tiêu";
@@ -1413,7 +1426,6 @@
 "menu_bar_layout_gap_tight" = "Hẹp";
 "menu_bar_layout_gap_regular" = "Thường";
 "menu_bar_layout_vertical_adjustment" = "Điều chỉnh dọc";
-"menu_bar_layout_keyboard_hint" = "Delete xóa thẻ đã chọn";
 "menu_bar_layout_sample_account" = "tài khoản";
 "menu_bar_layout_sample_runs_out" = "hết vào T6";
 "menu_bar_layout_token_icon" = "Biểu tượng";
@@ -1483,6 +1495,8 @@
 
 "Cumulative" = "Tích lũy";
 "Token activity" = "Hoạt động token";
+"Earlier activity" = "Hoạt động trước đây";
+"More recent activity" = "Hoạt động gần đây";
 "View" = "Chế độ xem";
 "in the last year" = "trong năm qua";
 "No activity in the last 12 months" = "Không có hoạt động trong 12 tháng qua";
@@ -1542,6 +1556,10 @@
 "Cache write" = "Cache write";
 "Reasoning" = "Reasoning";
 "Sessions" = "Sessions";
+
+"Independent chat" = "Cuộc trò chuyện độc lập";
+"Independent chats" = "Các cuộc trò chuyện độc lập";
+"Chat %d" = "Cuộc trò chuyện %d";
 "Projects" = "Projects";
 "Plan metered" = "Plan metered";
 "List-price equivalent" = "List-price equivalent";
@@ -1620,7 +1638,34 @@
 "account_widgets_title" = "Cập nhật tài khoản cho tiện ích";
 "account_widgets_description" = "Chọn một tài khoản trong mỗi tiện ích Account Usage. Làm mới tối đa sáu tài khoản cho mỗi nhà cung cấp.";
 
+/* Spend time zone */
+"Statistics time zone" = "Múi giờ thống kê";
+"Use Mac's current time zone" = "Dùng múi giờ hiện tại của Mac";
+"Daily usage uses a fixed time zone. Changing it may move usage to a different day." = "Mức sử dụng hằng ngày được nhóm theo một múi giờ cố định. Thay đổi múi giờ có thể chuyển mức sử dụng sang ngày khác.";
+
 /* Antigravity local cost estimates */
 "antigravity_cost_estimate_hint" = "Mức dùng cục bộ × giá API công khai · không phải phí hay tín dụng Antigravity";
 "antigravity_quota_window_note" = "Chi phí cửa sổ bao gồm mọi mô hình · cửa sổ hiển thị là nhóm bị giới hạn nhất";
 "antigravity_no_priced_token_history" = "Không có lịch sử token Antigravity được định giá.";
+"Supported browsers: %@. Use Manual for other browsers." = "Trình duyệt được hỗ trợ: %@. Dùng chế độ Thủ công cho các trình duyệt khác.";
+"Paste the Cookie header from a Chrome request to www.workbuddy.cn/profile/plans-usage." = "Dán tiêu đề Cookie từ yêu cầu Chrome tới www.workbuddy.cn/profile/plans-usage.";
+"Reserved" = "Đã giữ lại";
+
+/* Selected browser profile */
+"Browser profile" = "Hồ sơ trình duyệt";
+"Unavailable profile: %@" = "Hồ sơ không khả dụng: %@";
+"Read only the selected %@ profile. Accounts are never selected automatically." = "Chỉ đọc hồ sơ %@ đã chọn. Tài khoản không bao giờ được chọn tự động.";
+
+// Spend chart navigation and inspection
+"Recorded spend" = "Chi tiêu đã ghi nhận";
+"Highest recorded spend" = "Chi tiêu đã ghi nhận cao nhất";
+"Previous day" = "Ngày trước";
+"Next day" = "Ngày tiếp theo";
+"Click to isolate a source. Click again to show all." = "Nhấp để chỉ xem một nguồn. Nhấp lần nữa để xem tất cả.";
+"Recorded hourly spend" = "Chi tiêu theo giờ đã ghi nhận";
+"Highest spend" = "Chi tiêu cao nhất";
+"Models for this day" = "Mô hình của ngày này";
+
+"Click a bar to explore. Use the menu below for exact amounts." = "Nhấp vào cột để khám phá. Dùng menu bên dưới để xem số tiền chính xác.";
+/* Provider menu bar color */
+"Color by provider" = "Màu theo nhà cung cấp";

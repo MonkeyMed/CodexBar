@@ -4,7 +4,7 @@ import SwiftUI
 
 @MainActor
 enum ProviderSettingsRefreshInteraction {
-    static func perform(operation: () async -> Void) async {
+    static func perform<Result>(operation: () async -> Result) async -> Result {
         await BrowserCookieAccessGate.withExplicitRetry {
             await ProviderInteractionContext.$current.withValue(.userInitiated) {
                 await operation()
@@ -68,6 +68,7 @@ struct ProvidersPane: View {
             settingsPickers: self.extraSettingsPickers(for: self.provider),
             settingsToggles: self.extraSettingsToggles(for: self.provider),
             settingsFields: self.extraSettingsFields(for: self.provider),
+            settingsDirectoryLists: self.extraSettingsDirectoryLists(for: self.provider),
             settingsActions: self.extraSettingsActions(for: self.provider),
             settingsTokenAccounts: self.tokenAccountDescriptor(for: self.provider),
             settingsOrganizations: self.extraSettingsOrganizations(for: self.provider),
@@ -269,8 +270,11 @@ struct ProvidersPane: View {
         }
 
         let result = await self.codexAccountPromotionCoordinator.promote(managedAccountID: managedAccountID)
-        if case let .failure(error) = result {
+        switch result {
+        case let .failure(error):
             self.codexAccountsNotice = CodexAccountsSectionNotice(text: error.message, tone: .warning)
+        case let .success(promotion):
+            self.codexAccountsNotice = promotion.daemonRestartNote.map { .init(text: $0, tone: .warning) }
         }
     }
 
@@ -382,6 +386,11 @@ struct ProvidersPane: View {
         let context = self.makeSettingsContext(provider: provider)
         return impl.settingsFields(context: context)
             .filter { $0.isVisible?() ?? true }
+    }
+
+    private func extraSettingsDirectoryLists(for provider: UsageProvider) -> [ProviderSettingsDirectoryListDescriptor] {
+        ProviderCatalog.implementation(for: provider)?
+            .settingsDirectoryLists(context: self.makeSettingsContext(provider: provider)) ?? []
     }
 
     private func extraSettingsActions(for provider: UsageProvider) -> [ProviderSettingsActionsDescriptor] {

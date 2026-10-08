@@ -100,6 +100,8 @@
 "Average (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))" = "Média (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))";
 "Avoid Keychain prompts" = "Evitar prompts do Keychain";
 "Balance" = "Saldo";
+"Cloud credits" = "Créditos na nuvem";
+"Expired" = "Expirado";
 "Battery Saver" = "Economia de bateria";
 "Bordered" = "Com borda";
 "Build" = "Build";
@@ -495,6 +497,7 @@
 "cost_summary_style_inline_help" = "Mostra o resumo de custos diretamente no menu principal.";
 "cost_summary_style_submenu_help" = "Mostra o submenu Custo detalhado em vez disso.";
 "cost_summary_style_both_help" = "Mostra o resumo no menu principal e o submenu Custo detalhado.";
+"Month to date" = "Mês até agora";
 "cost_history_window_title" = "Janela do histórico";
 "cost_history_window_help" = "Define quantos dias de logs de uso locais aparecem no menu.";
 "cost_history_days_title" = "Janela do histórico: %d dias";
@@ -537,6 +540,11 @@
 "session_depleted_notification_body" = "0% restante. Avisaremos quando estiver disponível novamente.";
 "session_restored_notification_title" = "Sessão do %@ restaurada";
 "session_restored_notification_body" = "A cota de sessão está disponível novamente.";
+"limit_reset_notifications_title" = "Avisos de redefinição";
+"limit_reset_notifications_subtitle" = "Informa o provedor e a janela quando um limite de sessão ou semanal é redefinido.";
+"limit_reset_notification_title" = "%1$@: limite redefinido (%2$@)";
+"limit_reset_notification_body" = "Há cota nova disponível.";
+"limit_reset_notification_body_with_account" = "Conta %@. Há cota nova disponível.";
 "quota_warning_warn_at" = "Alertar em";
 "quota_warning_global_threshold_subtitle" = "Percentuais restantes para as janelas de sessão e semanal, a menos que um provedor defina valores próprios.";
 "quota_warning_sound" = "Reproduzir som de notificação";
@@ -841,7 +849,6 @@
 "No local data found" = "Nenhum dado local encontrado";
 "Credits unavailable; keep Codex running to refresh." = "Créditos indisponíveis; mantenha o Codex em execução para atualizar.";
 "No available fetch strategy for minimax." = "Nenhuma estratégia de busca disponível para o minimax.";
-"No Cursor session found. Please log in to cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX, or Edge Canary. If you use Safari, grant CodexBar Full Disk Access in System Settings ▸ Privacy & Security. You can also sign in to Cursor from the CodexBar menu (Add / switch account)." = "Nenhuma sessão do Cursor encontrada. Faça login em cursor.com no Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX ou Edge Canary. Se você usa o Safari, conceda Acesso Total ao Disco ao CodexBar em Ajustes do Sistema ▸ Privacidade e Segurança. Você também pode entrar no Cursor pelo menu do CodexBar (Adicionar / trocar conta).";
 "No OpenCode session cookies found in browsers." = "Nenhum cookie de sessão do OpenCode encontrado nos navegadores.";
 "No available fetch strategy for %@." = "Nenhuma estratégia de busca disponível para %@.";
 "Today" = "Hoje";
@@ -956,6 +963,12 @@
 "Copied" = "Copiado";
 "Managed by Homebrew" = "Gerenciado pelo Homebrew";
 "Copy update command" = "Copiar comando de atualização";
+"Update to %@" = "Atualizar para %@";
+"CodexBar %@ is available" = "CodexBar %@ está disponível";
+"CodexBar is up to date" = "CodexBar está atualizado";
+"Checking for updates…" = "Procurando atualizações…";
+"Updating with Homebrew…" = "Atualizando com o Homebrew…";
+"Homebrew update failed. You can run this command in Terminal instead:" = "A atualização pelo Homebrew falhou. Você pode executar este comando no Terminal:";
 "Copy error" = "Erro ao copiar";
 "Copy path" = "Copiar caminho";
 "Extra usage spent" = "Gasto de uso extra";
@@ -1413,7 +1426,6 @@
 "menu_bar_layout_gap_tight" = "Apertado";
 "menu_bar_layout_gap_regular" = "Normal";
 "menu_bar_layout_vertical_adjustment" = "Ajuste vertical";
-"menu_bar_layout_keyboard_hint" = "Delete remove o item selecionado";
 "menu_bar_layout_sample_account" = "conta";
 "menu_bar_layout_sample_runs_out" = "acaba sex.";
 "menu_bar_layout_token_icon" = "Ícone";
@@ -1483,6 +1495,8 @@
 
 "Cumulative" = "Acumulado";
 "Token activity" = "Atividade de tokens";
+"Earlier activity" = "Atividade anterior";
+"More recent activity" = "Atividade mais recente";
 "View" = "Visualização";
 "in the last year" = "no último ano";
 "No activity in the last 12 months" = "Sem atividade nos últimos 12 meses";
@@ -1542,6 +1556,10 @@
 "Cache write" = "Cache write";
 "Reasoning" = "Reasoning";
 "Sessions" = "Sessions";
+
+"Independent chat" = "Conversa independente";
+"Independent chats" = "Conversas independentes";
+"Chat %d" = "Conversa %d";
 "Projects" = "Projects";
 "Plan metered" = "Plan metered";
 "List-price equivalent" = "List-price equivalent";
@@ -1619,7 +1637,34 @@
 "account_widgets_title" = "Manter as contas atualizadas para os widgets";
 "account_widgets_description" = "Escolha uma conta em cada widget Account Usage. Atualiza até seis contas por provedor.";
 
+/* Spend time zone */
+"Statistics time zone" = "Fuso horário das estatísticas";
+"Use Mac's current time zone" = "Usar o fuso horário atual do Mac";
+"Daily usage uses a fixed time zone. Changing it may move usage to a different day." = "O uso diário é agrupado em um fuso horário fixo. Alterá-lo pode transferir uso para outro dia.";
+
 /* Antigravity local cost estimates */
 "antigravity_cost_estimate_hint" = "Uso local × preços públicos da API · não são cobranças ou créditos da Antigravity";
 "antigravity_quota_window_note" = "O custo da janela cobre todos os modelos · a janela exibida é a família mais restrita";
 "antigravity_no_priced_token_history" = "Nenhum histórico de tokens da Antigravity com preço disponível.";
+"Supported browsers: %@. Use Manual for other browsers." = "Navegadores compatíveis: %@. Use Manual para outros navegadores.";
+"Paste the Cookie header from a Chrome request to www.workbuddy.cn/profile/plans-usage." = "Cole o cabeçalho Cookie de uma solicitação do Chrome para www.workbuddy.cn/profile/plans-usage.";
+"Reserved" = "Reservado";
+
+/* Selected browser profile */
+"Browser profile" = "Perfil do navegador";
+"Unavailable profile: %@" = "Perfil indisponível: %@";
+"Read only the selected %@ profile. Accounts are never selected automatically." = "Ler apenas o perfil do %@ selecionado. As contas nunca são selecionadas automaticamente.";
+
+// Spend chart navigation and inspection
+"Recorded spend" = "Gasto registrado";
+"Highest recorded spend" = "Maior gasto registrado";
+"Previous day" = "Dia anterior";
+"Next day" = "Próximo dia";
+"Click to isolate a source. Click again to show all." = "Clique para isolar uma fonte. Clique novamente para mostrar todas.";
+"Recorded hourly spend" = "Gastos por hora registrados";
+"Highest spend" = "Maior gasto";
+"Models for this day" = "Modelos deste dia";
+
+"Click a bar to explore. Use the menu below for exact amounts." = "Clique em uma barra para explorar. O menu abaixo mostra os valores exatos.";
+/* Provider menu bar color */
+"Color by provider" = "Cor por provedor";

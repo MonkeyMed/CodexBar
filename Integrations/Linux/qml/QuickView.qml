@@ -353,14 +353,23 @@ ApplicationWindow {
                         }
                     }
                     ColumnLayout {
-                        visible: desktop.settings.showCosts && (window.selectedCost !== null || desktop.costBusy)
+                        visible: desktop.settings.showCosts && window.selectedEntry &&
+                            ["codex", "claude"].indexOf(window.selectedEntry.provider) >= 0 &&
+                            (window.selectedCost !== null || desktop.costBusy || desktop.costError !== "")
                         width: parent.width
                         spacing: 8
                         Rectangle { Layout.fillWidth: true; height: 1; color: window.dividerColor }
                         Label { text: "Cost across accounts"; color: window.primaryText; font.pixelSize: 15; font.weight: Font.DemiBold }
                         Label {
+                            text: desktop.costBusy ? "Reading local history…" : desktop.costError
+                            visible: text !== ""
+                            color: window.secondaryText; font.pixelSize: 12
+                            Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                        }
+                        Label {
                             text: window.selectedCost ? "Today " + Usage.money(window.selectedCost.today) +
-                                "  ·  Last 30 days " + Usage.money(window.selectedCost.month) : "Reading local history…"
+                                "  ·  Last 30 days " + Usage.money(window.selectedCost.month) : ""
+                            visible: window.selectedCost !== null
                             color: window.primaryText; font.pixelSize: 13
                             Layout.fillWidth: true; wrapMode: Text.Wrap
                         }
@@ -370,6 +379,15 @@ ApplicationWindow {
                                 Usage.provenance(window.selectedCost.provenance) : ""
                             color: window.secondaryText; font.pixelSize: 12
                             Layout.fillWidth: true; wrapMode: Text.Wrap
+                        }
+                        Repeater {
+                            model: window.selectedCost ? [window.selectedCost.error, window.selectedCost.coverage] : []
+                            Label {
+                                required property string modelData
+                                text: modelData; visible: text !== ""
+                                color: window.secondaryText; font.pixelSize: 12
+                                Layout.fillWidth: true; wrapMode: Text.Wrap; textFormat: Text.PlainText
+                            }
                         }
                     }
                     Repeater {
@@ -410,7 +428,7 @@ ApplicationWindow {
             Layout.leftMargin: 12; Layout.rightMargin: 12
             Layout.topMargin: 6; Layout.bottomMargin: 8
             spacing: 1
-            ActionRow { text: "Usage & Spend…"; onClicked: window.openPage("dashboard") }
+            ActionRow { text: "Usage & Spend…"; onClicked: window.openPage("usage") }
             ActionRow { text: "Settings…"; onClicked: window.openPage("settings") }
             ActionRow { text: "About CodexBar"; onClicked: about.open() }
             ActionRow { text: "Quit"; onClicked: Qt.quit() }

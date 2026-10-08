@@ -108,12 +108,12 @@ jobs:
     # Apple-Silicon runners: ~2-4x faster Swift builds than the retired-path
     # Intel pool and much shorter queues (see #2585 for the measurements).
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        # Two shards amortize SwiftPM's per-shard discovery/cold build.
-        # Each shard remains within the 50-minute Swift Test timeout.
+        # Two serial shards avoid a third cold build while direct launch is unverified.
+        # Leave timeout headroom for runner variance and suite growth.
         shard-index: [0, 1]
         shard-count: [2]
     steps:
@@ -152,8 +152,10 @@ jobs:
 
       - name: Swift Test
         # Batch short suites; the runner isolates expensive suites without changing their deadlines.
-        timeout-minutes: 50
+        timeout-minutes: 75
         run: |
+          touch "$RUNNER_TEMP/codexbar-tests-started"
+          echo "Hosted tests use two serial SwiftPM shards; direct runtime validation is nonblocking."
           CODEXBAR_TEST_GROUP_SIZE=8 \
             CODEXBAR_TEST_SUITE_TIMEOUT=120 \
             CODEXBAR_TEST_RETRY_NON_TIMEOUT_FAILURES=0 \
@@ -161,26 +163,30 @@ jobs:
             CODEXBAR_TEST_SHARD_COUNT=${{ matrix.shard-count }} \
             ./Scripts/test.sh
 
+      - name: Direct runtime smoke test (nonblocking)
+        id: direct-probe
+        if: ${{ success() && matrix.shard-index == 0 }}
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          CODEXBAR_TEST_GROUP_SIZE=8 \
+            CODEXBAR_TEST_SUITE_TIMEOUT=120 \
+            CODEXBAR_TEST_RETRY_NON_TIMEOUT_FAILURES=0 \
+            CODEXBAR_TEST_SHARD_INDEX=${{ matrix.shard-index }} \
+            CODEXBAR_TEST_SHARD_COUNT=${{ matrix.shard-count }} \
+            ./Scripts/test.sh --direct-workers 2 --limit-groups 1
+
       - name: Provider plugin engine A/B goldens
         if: ${{ matrix.shard-index == 0 }}
         run: ./Scripts/test-plugin-engines.sh
 
       - name: Collect crash reports on failure
-        if: ${{ failure() }}
+        if: ${{ failure() || steps.direct-probe.outcome == 'failure' }}
         shell: bash
         run: |
-          set -uo pipefail
-          reports="$HOME/Library/Logs/DiagnosticReports"
-          found=0
-          if [[ -d "$reports" ]]; then
-            while IFS= read -r file; do
-              found=1
-              echo "::group::crash report $(basename "$file")"
-              cat "$file"
-              echo "::endgroup::"
-            done < <(find "$reports" \( -name '*.ips' -o -name '*.crash' \) -newer .git/HEAD -print 2>/dev/null | head -5)
+          if [[ -f "$RUNNER_TEMP/codexbar-tests-started" ]]; then
+            python3 Scripts/swift_test_diagnostics.py --since "$RUNNER_TEMP/codexbar-tests-started"
           fi
-          [[ "$found" == 1 ]] || echo "no fresh crash reports under $reports"
 
       - name: Summarize macOS shard
         if: ${{ always() }}
@@ -203,6 +209,38 @@ jobs:
             printf '| Runs lint-macos | `%s` |\n' "$RUNS_LINT_MACOS"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  swift-build-macos-compatibility:
+    needs: changes
+    if: ${{ needs.changes.outputs.macos-tests == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode 26.3
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          echo "DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer" >> "$GITHUB_ENV"
+          [[ "$(/usr/bin/xcodebuild -version)" == Xcode\ 26.3* ]]
+          /usr/bin/xcodebuild -version
+
+      - name: Restore SwiftPM build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-macos15-xcode26.3-arm64-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            swiftpm-macos15-xcode26.3-arm64-
+
+      - name: Build app, CLI, and tests with Swift 6.2
+        run: |
+          set -euo pipefail
+          swift --version
+          swift build --build-tests
+
   lint-build-test:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -210,6 +248,7 @@ jobs:
       - changes
       - lint
       - swift-test-macos
+      - swift-build-macos-compatibility
       - build-linux-musl-cli
       - build-linux-cli
     if: ${{ always() && !cancelled() }}
@@ -226,7 +265,8 @@ jobs:
             "${{ needs.changes.outputs.macos-tests-deferred }}" \
             "${{ needs.changes.outputs.linux-musl-build }}" \
             "${{ needs.build-linux-musl-cli.result }}" \
-            "${{ needs.build-linux-cli.result }}"
+            "${{ needs.build-linux-cli.result }}" \
+            "${{ needs.swift-build-macos-compatibility.result }}"
 
       - name: Summarize aggregate CI gate
         if: ${{ always() }}
@@ -238,6 +278,7 @@ jobs:
           MACOS_TESTS_DEFERRED: ${{ needs.changes.outputs.macos-tests-deferred }}
           MACOS_TESTS_REASON: ${{ needs.changes.outputs.macos-tests-reason }}
           MACOS_RESULT: ${{ needs.swift-test-macos.result }}
+          MACOS_COMPATIBILITY_RESULT: ${{ needs.swift-build-macos-compatibility.result }}
           LINUX_MUSL_BUILD: ${{ needs.changes.outputs.linux-musl-build }}
           LINUX_MUSL_BUILD_REASON: ${{ needs.changes.outputs.linux-musl-build-reason }}
           LINUX_MUSL_RESULT: ${{ needs.build-linux-musl-cli.result }}
@@ -258,6 +299,7 @@ jobs:
             printf '| macOS Swift tests deferred | `%s` |\n' "${MACOS_TESTS_DEFERRED:-<unset>}"
             printf '| macOS gate reason | %s |\n' "$reason"
             printf '| swift-test-macos result | `%s` |\n' "$MACOS_RESULT"
+            printf '| Swift 6.2 build result | `%s` |\n' "$MACOS_COMPATIBILITY_RESULT"
             printf '| Linux musl build required | `%s` |\n' "${LINUX_MUSL_BUILD:-<unset>}"
             printf '| Linux musl gate reason | %s |\n' "$musl_reason"
             printf '| build-linux-musl-cli result | `%s` |\n' "$LINUX_MUSL_RESULT"
@@ -522,7 +564,9 @@ jobs:
         run: swift build -c release --product CodexBarCLI --static-swift-stdlib
 
       - name: Swift Test (Linux only)
-        run: swift test --parallel
+        run: |
+          source Scripts/test_environment.sh
+          swift test --parallel
 
       - name: Smoke test CodexBarCLI
         shell: bash

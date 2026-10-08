@@ -1,3 +1,4 @@
+import CodexBarCore
 import Foundation
 
 struct SettingsDefaultsState {
@@ -12,9 +13,12 @@ struct SettingsDefaultsState {
     var debugLoadingPatternRaw: String?
     var debugKeepCLISessionsAlive: Bool
     var statusChecksEnabled: Bool
+    var stayAwakeEnabled: Bool
+    var credentialExpiryNotificationsEnabled: Bool
     var sessionQuotaNotificationsEnabled: Bool
     var quotaWarningNotificationsEnabled: Bool
     var predictivePaceWarningNotificationsEnabled: Bool
+    var limitResetNotificationsEnabled: Bool
     var quotaWarningThresholdsRaw: [Int]
     var quotaWarningSessionThresholdsRaw: [Int]
     var quotaWarningWeeklyThresholdsRaw: [Int]
@@ -32,6 +36,7 @@ struct SettingsDefaultsState {
     var menuBarShowsBrandIconWithPercent: Bool
     var menuBarHidesCritters: Bool
     var menuBarColorPace: Bool
+    var menuBarColorByProvider: Bool
     var menuBarHighContrastOnInactiveDisplays: Bool
     var menuBarDisplayModeRaw: String?
     var menuBarShowsResetTimeWhenExhausted: Bool
@@ -51,7 +56,7 @@ struct SettingsDefaultsState {
     var copilotSeatCreditEntitlementRaw: String
     var costUsageEnabled: Bool
     var codexLocalSessionCostLedgerEnabled: Bool
-    var costUsageHistoryDays: Int
+    var costReportingPeriod: CostReportingPeriod
     var costUsageBucketTimeZoneIdentifier: String
     var openCodexUsageLogsEnabled: Bool
     var hideNativeCodexCostWhenOpenCodexPresent: Bool

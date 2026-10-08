@@ -80,6 +80,8 @@
 "Average (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))" = "المتوسط (\\(metadata.sessionLabel) + \\(metadata.weeklyLabel))";
 "Avoid Keychain prompts" = "تجنب Keychain الأسئلة";
 "Balance" = "التوازن";
+"Cloud credits" = "رصيد السحابة";
+"Expired" = "منتهية الصلاحية";
 "Battery Saver" = "منقذ البطارية";
 "Bordered" = "الحدود";
 "Build" = "البناء";
@@ -482,6 +484,7 @@
 "cost_summary_style_inline_help" = "يعرض ملخص التكلفة مباشرة في القائمة الرئيسية.";
 "cost_summary_style_submenu_help" = "يعرض بدلاً من ذلك قائمة التكلفة الفرعية التفصيلية.";
 "cost_summary_style_both_help" = "يعرض ملخص القائمة الرئيسية وقائمة التكلفة الفرعية التفصيلية.";
+"Month to date" = "من بداية الشهر حتى الآن";
 "cost_history_window_title" = "نافذة التاريخ";
 "cost_history_window_help" = "يحدد عدد أيام سجلات الاستخدام المحلية التي تظهر في القائمة.";
 "cost_history_days_title" = "نافذة التاريخ: %d أيام";
@@ -524,6 +527,11 @@
 "session_depleted_notification_body" = "المتبقي 0%. سنبلغك عندما تصبح الحصة متاحة مجددًا.";
 "session_restored_notification_title" = "%@ الجلسة التي استعادت";
 "session_restored_notification_body" = "حصة الجلسة متاحة مرة أخرى.";
+"limit_reset_notifications_title" = "إشعارات إعادة التعيين";
+"limit_reset_notifications_subtitle" = "يُعلمك بالمزوّد والنافذة عند إعادة تعيين حد الجلسة أو الحد الأسبوعي.";
+"limit_reset_notification_title" = "تمت إعادة تعيين حد %2$@ لدى %1$@";
+"limit_reset_notification_body" = "تتوفر حصة جديدة.";
+"limit_reset_notification_body_with_account" = "الحساب %@. تتوفر حصة جديدة.";
 "quota_warning_warn_at" = "التحذير في";
 "quota_warning_global_threshold_subtitle" = "النسب المتبقية للجلسات والفترات الأسبوعية ما لم يتجاوزها مقدم الخدمة.";
 "quota_warning_sound" = "تشغيل صوت الإشعار";
@@ -850,7 +858,6 @@
 "No local data found" = "لم يتم العثور على بيانات محلية";
 "Credits unavailable; keep Codex running to refresh." = "الاعتمادات غير متوفرة؛ استمر في Codex لتجديد النشاط.";
 "No available fetch strategy for minimax." = "لا توجد استراتيجية جلب متاحة للمينيماكس.";
-"No Cursor session found. Please log in to cursor.com in Safari, Chrome, Microsoft Edge, Brave, Arc, Dia, ChatGPT Atlas, Chromium, Helium, Vivaldi, Yandex Browser, Firefox, Zen, Colibri, Sidekick, Opera, Opera GX, or Edge Canary. If you use Safari, grant CodexBar Full Disk Access in System Settings ▸ Privacy & Security. You can also sign in to Cursor from the CodexBar menu (Add / switch account)." = "لم يتم العثور على جلسة Cursor. يرجى تسجيل الدخول إلى cursor.com في Safari، Chrome، مايكروسوفت إيدج، بريف، آرك، دييا، شات جي بي تي أطلس، كروميوم، هيليوم، فيفالدي، متصفح ياندكس، فايرفوكس، زين، كوليبري، سايدكيك، أوبرا، أوبرا GX، أو إيدج كاناري. إذا كنت تستخدم Safari، امنح CodexBar الوصول الكامل للقرص في إعدادات النظام ▸ الخصوصية والأمان. يمكنك أيضا تسجيل الدخول إلى Cursor من قائمة CodexBar (إضافة / تغيير الحساب).";
 "No OpenCode session cookies found in browsers." = "لا توجد ملفات تعريف الارتباط للجلسة OpenCode في المتصفحات.";
 "No available fetch strategy for %@." = "لا توجد استراتيجية جلب متاحة %@.";
 "Today" = "اليوم";
@@ -966,6 +973,12 @@
 "Copied" = "تم النسخ";
 "Managed by Homebrew" = "تتم إدارته بواسطة Homebrew";
 "Copy update command" = "نسخ أمر التحديث";
+"Update to %@" = "التحديث إلى %@";
+"CodexBar %@ is available" = "CodexBar %@ متاح";
+"CodexBar is up to date" = "CodexBar محدَّث";
+"Checking for updates…" = "جارٍ البحث عن تحديثات…";
+"Updating with Homebrew…" = "جارٍ التحديث عبر Homebrew…";
+"Homebrew update failed. You can run this command in Terminal instead:" = "فشل التحديث عبر Homebrew. يمكنك تشغيل هذا الأمر في Terminal بدلاً من ذلك:";
 "Copy error" = "خطأ في النسخ.";
 "Copy path" = "مسار النسخ";
 "Extra usage spent" = "الاستخدام الإضافي المخصص";
@@ -1416,7 +1429,6 @@
 "menu_bar_layout_gap_tight" = "ضيّق";
 "menu_bar_layout_gap_regular" = "عادي";
 "menu_bar_layout_vertical_adjustment" = "الضبط العمودي";
-"menu_bar_layout_keyboard_hint" = "يحذف Delete العنصر المحدد";
 "menu_bar_layout_sample_account" = "حساب";
 "menu_bar_layout_sample_runs_out" = "ينفد الجمعة";
 "menu_bar_layout_token_icon" = "الأيقونة";
@@ -1486,6 +1498,8 @@
 
 "Cumulative" = "تراكمي";
 "Token activity" = "نشاط الرموز";
+"Earlier activity" = "نشاط أقدم";
+"More recent activity" = "نشاط أحدث";
 "View" = "عرض";
 "in the last year" = "في العام الماضي";
 "No activity in the last 12 months" = "لا يوجد نشاط في آخر 12 شهرًا";
@@ -1545,6 +1559,10 @@
 "Cache write" = "Cache write";
 "Reasoning" = "Reasoning";
 "Sessions" = "Sessions";
+
+"Independent chat" = "محادثة مستقلة";
+"Independent chats" = "محادثات مستقلة";
+"Chat %d" = "محادثة %d";
 "Projects" = "Projects";
 "Plan metered" = "Plan metered";
 "List-price equivalent" = "List-price equivalent";
@@ -1623,7 +1641,34 @@
 "account_widgets_title" = "تحديث الحسابات للأدوات";
 "account_widgets_description" = "اختر حسابًا في كل أداة Account Usage. يتم تحديث ما يصل إلى ستة حسابات لكل مزوّد.";
 
+/* Spend time zone */
+"Statistics time zone" = "المنطقة الزمنية للإحصاءات";
+"Use Mac's current time zone" = "استخدام المنطقة الزمنية الحالية للـ Mac";
+"Daily usage uses a fixed time zone. Changing it may move usage to a different day." = "يُحسب الاستخدام اليومي وفق منطقة زمنية ثابتة. قد يؤدي تغييرها إلى نقل الاستخدام إلى يوم مختلف.";
+
 /* Antigravity local cost estimates */
 "antigravity_cost_estimate_hint" = "الاستخدام المحلي × أسعار واجهة البرمجة العامة · ليست رسوم أو أرصدة Antigravity";
 "antigravity_quota_window_note" = "تكلفة النافذة تشمل كل النماذج · النافذة المعروضة هي الفئة الأكثر تقييدًا";
 "antigravity_no_priced_token_history" = "لا يتوفر سجل رموز Antigravity مُسعّر.";
+"Supported browsers: %@. Use Manual for other browsers." = "المتصفحات المدعومة: %@. استخدم الوضع اليدوي للمتصفحات الأخرى.";
+"Paste the Cookie header from a Chrome request to www.workbuddy.cn/profile/plans-usage." = "الصق ترويسة Cookie من طلب Chrome إلى www.workbuddy.cn/profile/plans-usage.";
+"Reserved" = "محجوز";
+
+/* Selected browser profile */
+"Browser profile" = "ملف تعريف المتصفح";
+"Unavailable profile: %@" = "ملف التعريف غير متاح: %@";
+"Read only the selected %@ profile. Accounts are never selected automatically." = "قراءة ملف تعريف %@ المحدد فقط. لا يتم اختيار الحسابات تلقائيًا مطلقًا.";
+
+// Spend chart navigation and inspection
+"Recorded spend" = "الإنفاق المسجل";
+"Highest recorded spend" = "أعلى إنفاق مسجل";
+"Previous day" = "اليوم السابق";
+"Next day" = "اليوم التالي";
+"Click to isolate a source. Click again to show all." = "انقر لعرض مصدر واحد. انقر مجددًا لعرض الكل.";
+"Recorded hourly spend" = "الإنفاق المسجل حسب الساعة";
+"Highest spend" = "أعلى إنفاق";
+"Models for this day" = "نماذج هذا اليوم";
+
+"Click a bar to explore. Use the menu below for exact amounts." = "انقر على عمود لاستكشاف البيانات. استخدم القائمة أدناه لعرض المبالغ الدقيقة.";
+/* Provider menu bar color */
+"Color by provider" = "تلوين حسب المزوّد";

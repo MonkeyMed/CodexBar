@@ -18,6 +18,7 @@ struct ProviderDetailView<SupplementaryContent: View>: View {
     let settingsPickers: [ProviderSettingsPickerDescriptor]
     let settingsToggles: [ProviderSettingsToggleDescriptor]
     let settingsFields: [ProviderSettingsFieldDescriptor]
+    let settingsDirectoryLists: [ProviderSettingsDirectoryListDescriptor]
     let settingsActions: [ProviderSettingsActionsDescriptor]
     let settingsTokenAccounts: ProviderSettingsTokenAccountsDescriptor?
     let settingsOrganizations: ProviderSettingsOrganizationsDescriptor?
@@ -39,6 +40,7 @@ struct ProviderDetailView<SupplementaryContent: View>: View {
         settingsPickers: [ProviderSettingsPickerDescriptor],
         settingsToggles: [ProviderSettingsToggleDescriptor],
         settingsFields: [ProviderSettingsFieldDescriptor],
+        settingsDirectoryLists: [ProviderSettingsDirectoryListDescriptor] = [],
         settingsActions: [ProviderSettingsActionsDescriptor] = [],
         settingsTokenAccounts: ProviderSettingsTokenAccountsDescriptor?,
         settingsOrganizations: ProviderSettingsOrganizationsDescriptor? = nil,
@@ -59,6 +61,7 @@ struct ProviderDetailView<SupplementaryContent: View>: View {
         self.settingsPickers = settingsPickers
         self.settingsToggles = settingsToggles
         self.settingsFields = settingsFields
+        self.settingsDirectoryLists = settingsDirectoryLists
         self.settingsActions = settingsActions
         self.settingsTokenAccounts = settingsTokenAccounts
         self.settingsOrganizations = settingsOrganizations
@@ -102,17 +105,10 @@ struct ProviderDetailView<SupplementaryContent: View>: View {
             return nil
         }
         let presentation = ProviderDescriptorRegistry.descriptor(for: provider).presentation.planRow
-        guard presentation.stripsBalancePrefix else {
-            return (label: L(presentation.label), value: rawPlan)
-        }
-
-        let prefix = "Balance:"
-        if rawPlan.hasPrefix(prefix) {
-            let valueStart = rawPlan.index(rawPlan.startIndex, offsetBy: prefix.count)
-            let trimmedValue = rawPlan[valueStart...].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmedValue.isEmpty {
-                return (label: L(presentation.balancePrefixedLabel), value: trimmedValue)
-            }
+        if presentation.stripsBalancePrefix,
+           let value = MenuBarDisplayText.prefixedValue(from: rawPlan, prefix: "Balance:")
+        {
+            return (label: L(presentation.balancePrefixedLabel), value: value)
         }
         return (label: L(presentation.label), value: rawPlan)
     }
@@ -208,6 +204,10 @@ struct ProviderDetailView<SupplementaryContent: View>: View {
 
             ForEach(self.settingsFields) { field in
                 ProviderSettingsFieldRowView(field: field)
+            }
+
+            ForEach(self.settingsDirectoryLists) { descriptor in
+                ProviderSettingsDirectoryListRowView(descriptor: descriptor)
             }
 
             if let organizations = self.settingsOrganizations {
@@ -440,6 +440,7 @@ struct ProviderMetricsInlineView: View {
         let hasInfoRows: Bool
         let hasTokenUsage: Bool
         let hasResetCredits: Bool
+        let hasCloudCredits: Bool
         let hasProviderDetails: Bool
 
         init(model: UsageMenuCardView.Model, infoRows: [InfoRow]) {
@@ -449,6 +450,7 @@ struct ProviderMetricsInlineView: View {
             self.hasInfoRows = !infoRows.isEmpty
             self.hasTokenUsage = model.tokenUsage != nil
             self.hasResetCredits = model.limitResetCredits != nil
+            self.hasCloudCredits = model.cloudCredits != nil
             self.hasProviderDetails = !model.providerDetails.isEmpty
         }
 
@@ -459,6 +461,7 @@ struct ProviderMetricsInlineView: View {
                 !self.hasInfoRows &&
                 !self.hasTokenUsage &&
                 !self.hasResetCredits &&
+                !self.hasCloudCredits &&
                 !self.hasProviderDetails
         }
     }
@@ -511,6 +514,10 @@ struct ProviderMetricsInlineView: View {
 
             if let resetCredits = self.model.limitResetCredits {
                 ProviderLimitResetCreditsInlineRow(presentation: resetCredits)
+            }
+
+            if let cloudCredits = self.model.cloudCredits {
+                ProviderMetricInlineTextRow(title: cloudCredits.title, value: cloudCredits.spendLine)
             }
 
             if let providerCost = self.model.providerCost, providerCost.showsInProviderDetails {

@@ -32,6 +32,7 @@ extension ProviderInstanceID {
     public static let moonshot = UsageProvider.moonshot.instanceID
     public static let amp = UsageProvider.amp.instanceID
     public static let t3chat = UsageProvider.t3chat.instanceID
+    public static let langdock = UsageProvider.langdock.instanceID
     public static let ollama = UsageProvider.ollama.instanceID
     public static let synthetic = UsageProvider.synthetic.instanceID
     public static let openrouter = UsageProvider.openrouter.instanceID
@@ -58,6 +59,7 @@ extension ProviderInstanceID {
     public static let llmproxy = UsageProvider.llmproxy.instanceID
     public static let litellm = UsageProvider.litellm.instanceID
     public static let bifrost = UsageProvider.bifrost.instanceID
+    public static let aixy = UsageProvider.aixy.instanceID
     public static let deepgram = UsageProvider.deepgram.instanceID
     public static let poe = UsageProvider.poe.instanceID
     public static let chutes = UsageProvider.chutes.instanceID
@@ -71,6 +73,7 @@ extension ProviderInstanceID {
     public static let aiand = UsageProvider.aiand.instanceID
     public static let zoommate = UsageProvider.zoommate.instanceID
     public static let xai = UsageProvider.xai.instanceID
+    public static let xapi = UsageProvider.xapi.instanceID
     public static let notion = UsageProvider.notion.instanceID
     public static let ibmbob = UsageProvider.ibmbob.instanceID
     public static let nous = UsageProvider.nous.instanceID
@@ -78,6 +81,7 @@ extension ProviderInstanceID {
     public static let coderabbit = UsageProvider.coderabbit.instanceID
     public static let replicate = UsageProvider.replicate.instanceID
     public static let huggingface = UsageProvider.huggingface.instanceID
+    public static let raycast = UsageProvider.raycast.instanceID
     public static let pi = UsageProvider.pi.instanceID
     public static let v0 = UsageProvider.v0.instanceID
     public static let typesafe = UsageProvider.typesafe.instanceID
@@ -87,6 +91,10 @@ extension ProviderInstanceID {
     public static let atlascloud = UsageProvider.atlascloud.instanceID
     public static let vercel = UsageProvider.vercel.instanceID
     public static let llmman = UsageProvider.llmman.instanceID
+    public static let xkiro = UsageProvider.xkiro.instanceID
+    public static let museai = UsageProvider.museai.instanceID
+    public static let lithosai = UsageProvider.lithosai.instanceID
+    public static let workbuddy = UsageProvider.workbuddy.instanceID
 }
 
 // swiftformat:enable sortDeclarations

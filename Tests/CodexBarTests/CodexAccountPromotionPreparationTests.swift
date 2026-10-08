@@ -1,7 +1,7 @@
-import CodexBarCore
 import Foundation
 import Testing
 @testable import CodexBar
+@testable import CodexBarCore
 
 @Suite(.serialized, CodexCredentialFixtures())
 @MainActor
@@ -29,7 +29,7 @@ struct CodexAccountPromotionPreparationTests {
         let builder = PreparedPromotionContextBuilder(
             store: container.fileStore,
             workspaceResolver: container.workspaceResolver,
-            snapshotLoader: SettingsStoreCodexAccountReconciliationSnapshotLoader(settingsStore: container.settings),
+            snapshotLoader: container.settings,
             authMaterialReader: DefaultCodexAuthMaterialReader(),
             baseEnvironment: container.baseEnvironment,
             fileManager: .default)
@@ -59,7 +59,7 @@ struct CodexAccountPromotionPreparationTests {
         let builder = PreparedPromotionContextBuilder(
             store: container.fileStore,
             workspaceResolver: container.workspaceResolver,
-            snapshotLoader: SettingsStoreCodexAccountReconciliationSnapshotLoader(settingsStore: container.settings),
+            snapshotLoader: container.settings,
             authMaterialReader: DefaultCodexAuthMaterialReader(),
             baseEnvironment: container.baseEnvironment,
             fileManager: .default)
@@ -101,7 +101,7 @@ struct CodexAccountPromotionPreparationTests {
         let builder = PreparedPromotionContextBuilder(
             store: container.fileStore,
             workspaceResolver: container.workspaceResolver,
-            snapshotLoader: SettingsStoreCodexAccountReconciliationSnapshotLoader(settingsStore: container.settings),
+            snapshotLoader: container.settings,
             authMaterialReader: DefaultCodexAuthMaterialReader(),
             baseEnvironment: container.baseEnvironment,
             fileManager: .default)
