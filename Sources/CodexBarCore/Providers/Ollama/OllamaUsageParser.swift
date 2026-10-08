@@ -17,6 +17,13 @@ enum OllamaUsageParser {
         case failure(ParseFailure)
     }
 
+    private struct CreditPage {
+        let planName: String?
+        let balance: String?
+        let monthlyCreditsUsed: String?
+        let refillMessage: String?
+    }
+
     static func parse(html: String, now: Date = Date()) throws -> OllamaUsageSnapshot {
         switch self.parseClassified(html: html, now: now) {
         case let .success(snapshot):
@@ -36,6 +43,24 @@ enum OllamaUsageParser {
         let weekly = self.parseUsageBlock(label: "Weekly usage", html: html)
 
         if monthly == nil, session == nil, weekly == nil {
+            if let creditPage = self.parseCreditPage(html) {
+                let rows = [
+                    creditPage.balance.map { ProviderDetailSection.makeRow(label: "Credit balance", value: $0) },
+                    creditPage.monthlyCreditsUsed.map { ProviderDetailSection.makeRow(
+                        label: "Monthly credits used",
+                        value: $0) },
+                    creditPage.refillMessage.map { ProviderDetailSection.makeRow(label: "Next refill", value: $0) },
+                ].compactMap(\.self)
+                return .success(OllamaUsageSnapshot(
+                    planName: creditPage.planName,
+                    accountEmail: email,
+                    sessionUsedPercent: nil,
+                    weeklyUsedPercent: nil,
+                    sessionResetsAt: nil,
+                    weeklyResetsAt: nil,
+                    details: [ProviderDetailSection.makeSection(title: "Ollama credits", rows: rows)],
+                    updatedAt: now))
+            }
             if self.looksSignedOut(html) {
                 return .failure(.notLoggedIn)
             }
@@ -77,6 +102,52 @@ enum OllamaUsageParser {
             }
         }
         return nil
+    }
+
+    /// Current Ollama accounts can expose a credit wallet instead of quota windows.
+    /// Preserve the provider's reported balances as details; never invent a quota percentage.
+    private static func parseCreditPage(_ html: String) -> CreditPage? {
+        let headingPattern = #"<h[1-6][^>]*>\s*Usage credits\s*<span[^>]*>\s*([^<]+)\s*</span\s*>\s*</h[1-6]\s*>"#
+        guard let headingRegex = try? NSRegularExpression(pattern: headingPattern, options: [.caseInsensitive]),
+              let headingMatch = headingRegex.firstMatch(
+                  in: html,
+                  range: NSRange(html.startIndex..<html.endIndex, in: html)),
+              let planRange = Range(headingMatch.range(at: 1), in: html),
+              let headingEnd = Range(headingMatch.range, in: html)?.upperBound
+        else {
+            return nil
+        }
+
+        let amount = #"(\$(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?)"#
+        let balancePattern = #"<span[^>]*>\s*\#(amount)\s*</span\s*>"#
+        let afterHeading = String(html[headingEnd...].prefix(1000))
+        let balance = self.firstCapture(in: afterHeading, pattern: balancePattern, options: [.dotMatchesLineSeparators])
+
+        var text = html
+        for pattern in [#"(?is)<script[^>]*>.*?</script>"#, #"(?is)<style[^>]*>.*?</style>"#] {
+            text = text.replacingOccurrences(of: pattern, with: " ", options: .regularExpression)
+        }
+        text = text.replacingOccurrences(of: #"<[^>]+>"#, with: " ", options: .regularExpression)
+        text = text.replacingOccurrences(of: "&nbsp;", with: " ")
+        text = text.replacingOccurrences(of: "&amp;", with: "&")
+        text = text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+
+        let monthlyUsed = self.firstCapture(
+            in: text,
+            pattern: #"Monthly credits used\s*\#(amount)"#,
+            options: [.caseInsensitive])
+        let refillMessage = self.firstCapture(
+            in: text,
+            pattern: #"Refills\s+(to\s+\#(amount)\s+in\s+[^.]{1,40}\.?)"#,
+            options: [.caseInsensitive])
+        guard balance != nil || monthlyUsed != nil else { return nil }
+
+        let planName = String(html[planRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return CreditPage(
+            planName: planName.isEmpty ? nil : planName,
+            balance: balance,
+            monthlyCreditsUsed: monthlyUsed,
+            refillMessage: refillMessage)
     }
 
     private static func parseAccountEmail(_ html: String) -> String? {
