@@ -1,4 +1,4 @@
-# Installed WidgetKit minute-text proof
+# Installed WidgetKit age/layout proof and reset failure
 
 This exercises the desktop WidgetKit extension, not ImageRenderer or an in-process SwiftUI preview.
 The installed medium **Switcher** uses synthetic Codex data: 93% weekly remaining, an age source
@@ -6,28 +6,34 @@ The installed medium **Switcher** uses synthetic Codex data: 93% weekly remainin
 
 ## Captured behavior
 
+**Status:** Age advancement and the right-aligned medium headline are demonstrated.
+Compact reset advancement is not: accessibility and pixels disagree. This is a failing runtime
+experiment, not a claim that the reset implementation is ready.
+
 All timestamps below are UTC on 2026-10-08. The macOS log prints local time (UTC+03:00).
 
-| Capture | Saved age | Reset text |
-| --- | --- | --- |
-| 08:30:33 | 5 minutes | Resets in 1m |
-| 08:31:42 | 6 minutes | Resets in 0m |
-| 08:32:39 | 7 minutes | Resets in 0m |
-| 08:34:03 | 8 minutes | Resets in 0m |
+| Capture | Saved age (AX and pixels) | Reset AX | Reset pixels |
+| --- | --- | --- | --- |
+| 08:30:33 | 5 minutes | Resets in 1m | Resets in 1m |
+| 08:31:42 | 6 minutes | Resets in 0m | Resets in 1m |
+| 08:32:39 | 7 minutes | Resets in 0m | Resets in 1m |
+| 08:34:03 | 8 minutes | Resets in 0m | Resets in 1m |
 
 The reset was 08:32:12. The final frame is more than a minute after expiration; the countdown
-remains zero instead of counting up. Compact components truncate sub-minute remainder to `0m`.
+reports zero in accessibility, while rendered pixels remain at `1m`. Formatter unit tests
+correctly produce zero; they do not establish visual updates in the out-of-process renderer.
 
 ![Before the next minute](screenshots/widget-minute-installed-01-before-minute.png)
 ![Next minute](screenshots/widget-minute-installed-02-next-minute.png)
 ![After reset](screenshots/widget-minute-installed-03-expired-reset.png)
-![Zero stays zero](screenshots/widget-minute-installed-04-zero-stays-zero.png)
+![After reset: pixels still show 1m](screenshots/widget-minute-installed-04-zero-stays-zero.png)
 
 The [timeline log](widget-runtime-proof/timeline.log) records initialization requests at
 08:30:22 and 08:30:26, each containing a single entry. No provider invocation occurs between
 08:30:33 and 08:34:03. The earliest requested refresh was 08:35:22, after every capture.
 [Raw accessibility captures](widget-runtime-proof/frames.json) identify the installed extension
-and its visible text. The reset appears at the right edge of the medium headline.
+and its accessibility text. The screenshots independently establish that the reset appears at the
+right edge, but also reveal its frozen pixels. Accessibility text is not treated as pixel proof.
 
 ## Fixture boundary and reproduction
 
@@ -52,6 +58,13 @@ are outside this proof. No real account data is used.
 The previous PR head `eec1b89b611ac9ab57f6ea3eaf59937d46270d92` used a custom
 `WidgetResetFormatStyle`. [The real WidgetKit archive error](widget-runtime-proof/prior-head-archive-failure.log)
 shows that Notification Center could not resolve that extension-defined type and displayed a
-placeholder. The repair uses Foundation's system components format with a live date range.
+placeholder. The first repair uses Foundation's system components format with a live date range, but
+this installed experiment shows that its visible countdown still freezes.
 It also gives the reset label a finite width and trailing text alignment so WidgetKit chooses
-the horizontal headline when it fits. Synthetic previews had missed both host-specific problems.
+the horizontal headline when it fits. Synthetic previews had missed the archive, sizing, and visible countdown problems.
+
+A subsequent isolated trial removed the interpolated prefix and displayed the components
+range directly; its accessibility text still advanced while its pixels froze. A system
+`DateReference` trial with day/hour/minute fields did visibly advance, but writes units as words
+rather than the requested compact `5d 23h`. That trial is not the production source in this PR.
+Choosing that format or a prepared timeline for compact text requires author direction.
