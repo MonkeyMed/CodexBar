@@ -226,8 +226,12 @@ package struct PreparedPromotionContextBuilder {
         }
         let payload = idToken.flatMap(UsageFetcher.parseJWT)
         let authDict = payload?["https://api.openai.com/auth"] as? [String: Any]
+        let profileDict = payload?["https://api.openai.com/profile"] as? [String: Any]
 
-        let email = CodexNativeCredentialOwnerIdentity.normalizedEmail(fromIDToken: idToken)
+        // Promotion preserves its established top-level email precedence. Credential release applies
+        // the stricter owner-evidence policy in CodexNativeCredentialOwnerIdentity instead.
+        let email = CodexIdentityResolver.normalizeEmail(
+            (payload?["email"] as? String) ?? (profileDict?["email"] as? String))
         let plan = Self.normalizedField(
             (authDict?["chatgpt_plan_type"] as? String) ?? (payload?["chatgpt_plan_type"] as? String))
         let accountID = ManagedCodexAccount.normalizeWorkspaceAccountID(
