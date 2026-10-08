@@ -92,7 +92,11 @@ enum SpendToolActivityFilter: String, CaseIterable, Identifiable {
     }
 
     var label: String {
-        L("spend_tools_filter_" + self.rawValue)
+        switch self {
+        case .all: L("spend_tools_filter_all")
+        case .attention: L("spend_tools_filter_attention")
+        case .slow: L("spend_tools_filter_slow")
+        }
     }
 
     func includes(_ operation: SessionToolOperation) -> Bool {
@@ -293,14 +297,28 @@ func spendToolOperationName(_ operation: SessionToolOperation, hidePersonalInfo:
     if !hidePersonalInfo, operation.kind == .mcp || operation.kind == .dynamic || operation.kind == .extensionItem {
         return operation.name
     }
-    return L("spend_tools_kind_" + operation.kind.rawValue)
+    return switch operation.kind {
+    case .command: L("spend_tools_kind_command")
+    case .mcp: L("spend_tools_kind_mcp")
+    case .dynamic: L("spend_tools_kind_dynamic")
+    case .fileChange: L("spend_tools_kind_fileChange")
+    case .webSearch: L("spend_tools_kind_webSearch")
+    case .image: L("spend_tools_kind_image")
+    case .extensionItem: L("spend_tools_kind_extensionItem")
+    }
 }
 
 func spendToolOutcome(_ operation: SessionToolOperation) -> String {
     if operation.outcome == .nonzeroExit, let code = operation.exitCode {
         return L("spend_tools_exit", codexBarLocalizedInteger(code))
     }
-    return L("spend_tools_outcome_" + operation.outcome.rawValue)
+    return switch operation.outcome {
+    case .completed: L("spend_tools_outcome_completed")
+    case .nonzeroExit: L("spend_tools_outcome_nonzeroExit")
+    case .toolError: L("spend_tools_outcome_toolError")
+    case .declined: L("spend_tools_outcome_declined")
+    case .unknown: L("spend_tools_outcome_unknown")
+    }
 }
 
 func spendToolCompletionText(_ date: Date, timeZone: TimeZone) -> String {
