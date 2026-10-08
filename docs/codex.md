@@ -104,6 +104,8 @@ Usage source picker:
 - Settings → Providers → Codex shows each visible account's saved usage when multiple OAuth accounts are available.
   Opening the pane reads the retained snapshots without starting a refresh. Each row keeps its own usage age and
   error, including accounts not fetched yet, and distinguishes **CodexBar follows** from **System**.
+  The first failed refresh after managed credentials rotate shows its authentication error. Another rotation
+  discards the previous credentials' error, even when the saved account metadata has not changed.
   **Hide personal information** uses the same numbered account and workspace labels as the account switcher.
   Authorized OpenAI Code review usage remains on the followed account's row; sibling rows never inherit it,
   and same-email ambiguity keeps the existing display-only dashboard policy.
