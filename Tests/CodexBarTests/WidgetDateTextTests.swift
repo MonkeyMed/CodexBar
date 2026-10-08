@@ -20,21 +20,14 @@ struct WidgetDateTextTests {
     }
 
     @Test
-    func `compact reset stays live across minute boundaries and expires`() throws {
+    func `system reset format has compact minute precision and a zero endpoint`() {
         guard #available(macOS 15, *) else { return }
         let reset = Date(timeIntervalSince1970: 1_700_000_000)
-        let style = WidgetResetFormatStyle(resetAt: reset)
-        #expect(style.format(reset.addingTimeInterval(-(5 * 86400 + 23 * 3600))) == "Resets in 5d 23h")
-        let now = reset.addingTimeInterval(-61)
-        #expect(style.format(now) == "Resets in 2m")
-        let next = try #require(style.discreteInput(after: now))
-        #expect(next == reset.addingTimeInterval(-60))
-        #expect(style.format(next) == "Resets in 1m")
-        let previous = try #require(style.discreteInput(before: next))
-        #expect(previous < next)
-        #expect(style.format(previous) == "Resets in 2m")
-        let expired = try #require(style.discreteInput(after: next))
-        #expect(style.format(expired) == "Resets now")
-        #expect(style.discreteInput(after: expired) == nil)
+        let style = WidgetDateText.resetFormat().locale(Locale(identifier: "en_US"))
+        #expect(style.format(reset.addingTimeInterval(-(5 * 86400 + 23 * 3600))..<reset) == "5d 23h")
+        #expect(style.format(reset.addingTimeInterval(-61)..<reset) == "1m")
+        #expect(style.format(reset.addingTimeInterval(-60)..<reset) == "1m")
+        #expect(style.format(reset.addingTimeInterval(-59)..<reset) == "0m")
+        #expect(style.format(reset..<reset) == "0m")
     }
 }

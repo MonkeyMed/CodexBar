@@ -1,0 +1,17 @@
+{
+  "productionRendererSHA256": {
+    "WidgetDesignSystem.swift": "73968c4a019ef95cc9eecf3b891bdf5e4e91ea475b20b761e502312000b283ab",
+    "WidgetTiles.swift": "092cbda554a7740f3b2403afcc5ec5a825ac28402f439f7ba88dca3ca958722d",
+    "CodexBarWidgetViews.swift": "2da673caf7a71013af44440813e2b7b277264b694f20cc922bdcbffef4c87ddc",
+    "BurnDownWidgetViews.swift": "d928016977b9749adfd6069651426b880a7a348fb203f977f769828b43660801",
+    "CombinedBurnDownWidgetViews.swift": "17fa32bf921dc959eabe30d46d7ce27a2193cc738b3a78b39e6637c76f96147f"
+  },
+  "identicalProductionRenderingSources": true,
+  "fixtureAnchorUTC": "2026-10-08T08:30:22Z",
+  "fixtureResetUTC": "2026-10-08T08:32:12Z",
+  "earliestRequestedRefreshUTC": "2026-10-08T08:35:22Z",
+  "widgetKind": "CodexBarSwitcherWidget",
+  "family": "systemMedium",
+  "xcode": "27.0 (27A266a)",
+  "scope": "Installed WidgetKit renderer proof with synthetic snapshot input; not account fetching/AppIntent configuration proof."
+}

@@ -1,0 +1,94 @@
+--- a/Sources/CodexBarWidget/CodexBarWidgetProvider.swift
++++ b/Sources/CodexBarWidget/CodexBarWidgetProvider.swift
+@@ -2,6 +2,7 @@
+ import CodexBarCore
+ import SwiftUI
+ import WidgetKit
++import OSLog
+ 
+ enum ProviderChoice: String, AppEnum {
+     case codex
+@@ -158,7 +159,7 @@
+         return CodexBarWidgetEntry(
+             date: Date(),
+             provider: provider,
+-            snapshot: WidgetSnapshotStore.load() ?? WidgetPreviewData.snapshot())
++            snapshot: WidgetProofFixture.snapshot())
+     }
+ 
+     func timeline(
+@@ -166,10 +167,11 @@
+         in context: Context) async -> Timeline<CodexBarWidgetEntry>
+     {
+         let provider = configuration.provider.provider
+-        let snapshot = WidgetSnapshotStore.load() ?? WidgetPreviewData.emptySnapshot()
++        let snapshot = WidgetProofFixture.snapshot()
+         let now = Date()
+         let entry = CodexBarWidgetEntry(date: now, provider: provider, snapshot: snapshot)
+         let refresh = BurnDownRefreshSchedule.nextRefresh(snapshot: snapshot, provider: provider, now: now)
++        Logger(subsystem: "com.brzvsk.widget-proof", category: "timeline").notice("ENTRY date=\(now.ISO8601Format(), privacy: .public) refresh=\(refresh.ISO8601Format(), privacy: .public)")
+         return Timeline(entries: [entry], policy: .after(refresh))
+     }
+ }
+@@ -195,11 +197,12 @@
+             snapshot: entry.snapshot,
+             provider: entry.provider,
+             now: entry.date)
++        Logger(subsystem: "com.brzvsk.widget-proof", category: "timeline").notice("SWITCHER ENTRY date=\(entry.date.ISO8601Format(), privacy: .public) refresh=\(refresh.ISO8601Format(), privacy: .public) anchor=\(WidgetProofFixture.anchor.ISO8601Format(), privacy: .public)")
+         completion(Timeline(entries: [entry], policy: .after(refresh)))
+     }
+ 
+     private func makeEntry() -> CodexBarSwitcherEntry {
+-        let snapshot = WidgetSnapshotStore.load() ?? WidgetPreviewData.emptySnapshot()
++        let snapshot = WidgetProofFixture.snapshot()
+         let providers = Self.supportedProviders(from: snapshot)
+         let stored = WidgetSelectionStore.loadSelectedProvider()
+         let selected = providers.first { $0.instanceID == stored } ?? providers.first ?? .codex
+@@ -304,3 +307,32 @@
+         return WidgetSnapshot(entries: [entry], generatedAt: now)
+     }
+ }
++
++private enum WidgetProofFixture {
++    static let anchor = Date()
++    static func snapshot() -> WidgetSnapshot {
++        WidgetSnapshot(entries: [WidgetSnapshot.ProviderEntry(provider: .codex,
++            updatedAt: anchor.addingTimeInterval(-290), primary: nil,
++            secondary: RateWindow(usedPercent: 7, windowMinutes: 10080,
++                resetsAt: anchor.addingTimeInterval(110), resetDescription: nil),
++            tertiary: nil, creditsRemaining: nil, codeReviewRemainingPercent: nil,
++            tokenUsage: nil, dailyUsage: [])], generatedAt: anchor)
++    }
++}
++
++struct WidgetProofTimelineProvider: TimelineProvider {
++    func placeholder(in context: Context) -> CodexBarWidgetEntry {
++        CodexBarWidgetEntry(date: Date(), provider: .codex, snapshot: WidgetProofFixture.snapshot())
++    }
++    func getSnapshot(in context: Context, completion: @escaping (CodexBarWidgetEntry) -> Void) {
++        completion(self.placeholder(in: context))
++    }
++    func getTimeline(in context: Context, completion: @escaping (Timeline<CodexBarWidgetEntry>) -> Void) {
++        let now = Date()
++        let snapshot = WidgetProofFixture.snapshot()
++        let entry = CodexBarWidgetEntry(date: now, provider: .codex, snapshot: snapshot)
++        let refresh = BurnDownRefreshSchedule.nextRefresh(snapshot: snapshot, provider: .codex, now: now)
++        Logger(subsystem: "com.brzvsk.widget-proof", category: "timeline").notice("ENTRY date=\(now.ISO8601Format(), privacy: .public) refresh=\(refresh.ISO8601Format(), privacy: .public) anchor=\(WidgetProofFixture.anchor.ISO8601Format(), privacy: .public)")
++        completion(Timeline(entries: [entry], policy: .after(refresh)))
++    }
++}
+--- a/Sources/CodexBarWidget/CodexBarWidgetBundle.swift
++++ b/Sources/CodexBarWidget/CodexBarWidgetBundle.swift
+@@ -34,10 +34,9 @@
+     private let kind = "CodexBarUsageWidget"
+ 
+     var body: some WidgetConfiguration {
+-        AppIntentConfiguration(
++        StaticConfiguration(
+             kind: self.kind,
+-            intent: ProviderSelectionIntent.self,
+-            provider: CodexBarTimelineProvider())
++            provider: WidgetProofTimelineProvider())
+         { entry in
+             CodexBarUsageWidgetView(entry: entry)
+         }

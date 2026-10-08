@@ -298,7 +298,12 @@ struct HeroBlock: View {
                             .foregroundStyle(self.unavailableAwareColor)
                             .fixedSize()
                         Spacer(minLength: 4)
-                        self.detail?.font(.caption).foregroundStyle(.secondary)
+                        self.detail?
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.trailing)
+                            // Native live date text needs a finite proposal for ViewThatFits in WidgetKit.
+                            .frame(width: 120, alignment: .trailing)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
@@ -471,34 +476,16 @@ enum WidgetDateText {
 
     static func reset(_ date: Date) -> Text {
         if #available(macOS 15, *) {
-            return Text(.currentDate, format: WidgetResetFormatStyle(resetAt: date))
+            // Only system format styles can be decoded by the out-of-process WidgetKit host.
+            // The ending range clamps to zero after reset instead of counting upwards again.
+            return Text("Resets in \(Text(.dateRange(endingAt: date), format: self.resetFormat()))")
         }
         return Text("Resets in \(Text(date, style: .relative))")
     }
-}
 
-/// Reuses the menu's compact countdown while letting WidgetKit advance the text without a reload.
-@available(macOS 15, *)
-struct WidgetResetFormatStyle: DiscreteFormatStyle {
-    let resetAt: Date
-
-    func format(_ now: Date) -> String {
-        "Resets \(UsageFormatter.resetCountdownDescription(from: self.resetAt, now: now))"
-    }
-
-    func discreteInput(after input: Date) -> Date? {
-        let remaining = self.resetAt.timeIntervalSince(input)
-        guard remaining >= 1 else { return nil }
-        if remaining <= 60 { return self.resetAt.addingTimeInterval(-1).addingTimeInterval(0.001) }
-        let minutes = ceil(remaining / 60)
-        return self.resetAt.addingTimeInterval(-(minutes - 1) * 60)
-    }
-
-    func discreteInput(before input: Date) -> Date? {
-        let remaining = self.resetAt.timeIntervalSince(input)
-        if remaining < 1 { return self.resetAt.addingTimeInterval(-1) }
-        let minutes = ceil(remaining / 60)
-        return self.resetAt.addingTimeInterval(-minutes * 60 - 0.001)
+    @available(macOS 15, *)
+    static func resetFormat() -> Date.ComponentsFormatStyle {
+        .init(style: .narrow, fields: [.day, .hour, .minute])
     }
 }
 

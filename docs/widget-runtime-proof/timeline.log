@@ -1,0 +1,4 @@
+Timestamp               Ty Process[PID:TID]
+2026-10-08 11:30:22.538 Df CodexBarWidget[18732:199b88] [com.brzvsk.widget-proof:timeline] SWITCHER ENTRY date=2026-10-08T08:30:22Z refresh=2026-10-08T08:35:22Z anchor=2026-10-08T08:30:22Z
+2026-10-08 11:30:26.077 Df CodexBarWidget[18732:199b88] [com.brzvsk.widget-proof:timeline] SWITCHER ENTRY date=2026-10-08T08:30:26Z refresh=2026-10-08T08:35:26Z anchor=2026-10-08T08:30:22Z
+2026-10-08 11:30:26.307 Df CodexBarWidget[18732:199b88] [com.brzvsk.widget-proof:timeline] SWITCHER ENTRY date=2026-10-08T08:30:26Z refresh=2026-10-08T08:35:26Z anchor=2026-10-08T08:30:22Z
