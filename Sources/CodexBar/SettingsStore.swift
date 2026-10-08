@@ -625,6 +625,7 @@ extension SettingsStore {
             confettiOnSessionLimitResetsEnabled: confettiOnReset.session,
             confettiOnWeeklyLimitResetsEnabled: confettiOnReset.weekly,
             menuBarShowsHighestUsage: userDefaults.object(forKey: "menuBarShowsHighestUsage") as? Bool ?? false,
+            unifiedIconSourceRaw: userDefaults.string(forKey: "unifiedIconSource"),
             claudeOAuthKeychainPromptModeRaw: userDefaults.string(forKey: "claudeOAuthKeychainPromptMode"),
             claudeOAuthKeychainReadStrategyRaw: claudeOAuthKeychainReadStrategyRaw,
             // Explicit consent for reading Claude Code's Keychain item (#2634). Default OFF; never enabled silently.

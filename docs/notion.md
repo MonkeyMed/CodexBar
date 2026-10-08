@@ -71,6 +71,12 @@ Accounts that belong to more than one workspace default to the first workspace o
 plan. To pin a specific one, set **Workspace ID** in the provider settings, or `workspaceID` on the
 `notion` entry in `config.json`. Both dashed and undashed UUID forms are accepted.
 
+For accounts with many workspaces or members, discovery can exceed the plugin's 5 MiB response limit.
+If **Workspace ID** contains a valid UUID, CodexBar then requests allowances directly for that workspace.
+Email, account ID, workspace name, and plan are omitted for that refresh because discovery did not complete;
+normal-sized discovery still supplies them. Without a valid Workspace ID, the error asks you to configure one.
+The shared response limit remains unchanged, including for the allowance request.
+
 Notion does not support a standalone environment variable or a `--cookie` CLI flag for this provider. The
 only manual paths are the Settings fields above and `config.json`.
 
@@ -150,3 +156,6 @@ components.
   cookie.
 - **"No Notion cookies found"** — the browser profile has no `token_v2` cookie for Notion. Sign in, or
   switch to a manual cookie.
+- **"Notion workspace discovery is too large"** — set **Workspace ID** to the UUID of the Business or
+  Enterprise workspace to monitor. You can find it in the `spaceId` body field of the
+  `getCreditRateLimitStatus` request described in the Manual setup instructions.

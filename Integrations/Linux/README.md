@@ -192,7 +192,8 @@ an Overview and provider tabs with the same provider icons used by the macOS men
 reset times, pace, and optional local cost. The footer opens the full Usage & Spend
 window, Settings, About, or Quit. `--spending` opens its Spending tab. The full Usage & Spend window retains
 generic provider details and charts. Unknown values stay unknown. Identity is hidden by default. Display preferences control reset countdowns,
-absolute times, pace visibility, and low-quota colors. The tray can show two quota
+absolute times, pace visibility, the Omarchy bar's detail, per-model caps and provider
+count, and low-quota colors. The tray can show two quota
 meters for the first displayed provider or a static icon. Unknown meters remain
 empty tracks. The tooltip identifies the displayed providers and stale data.
 Omarchy's popup shares the quota/reset preferences.
@@ -246,8 +247,10 @@ apply when starting a new instance. The private, same-user local socket lives at
 `$XDG_RUNTIME_DIR/codexbar-linux/desktop.sock`; requests and replies are newline
 terminated JSON. Snapshot schema version 1 includes compact provider windows,
 summary, update time, busy/stale/error state, and spending availability. `barEntries`
-contains `{provider, tag, text}` for the same first two entries shown in `summary`,
-with quota text already formatted for the used/remaining preference. Adapters may
+contains `{provider, tag, text}` with quota text already formatted for the
+used/remaining preference. By default it matches the first two entries in
+`summary`; the [Omarchy bar preferences](../Omarchy/README.md) can opt into detailed
+labels, per-model caps, and a different entry count. Adapters may
 replace the tag with a local logo and count additional `entries` as `+N`; older
 backends omit this field, so adapters should fall back to `summary`.
 Each entry also carries `plan`, `status`, `statusLevel`, `updatedAt`, `credits`,

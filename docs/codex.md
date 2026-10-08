@@ -101,6 +101,16 @@ Usage source picker:
   valid sibling readings, their original ages, errors, and credits in memory and across restart. Removed accounts
   and rows whose ownership no longer matches the current account list are pruned; refresh failures only invalidate
   the affected account's reading.
+- Settings → Providers → Codex shows each visible account's saved usage when multiple OAuth accounts are available.
+  Opening the pane reads the retained snapshots without starting a refresh. Each row keeps its own usage age and
+  error, including accounts not fetched yet, and distinguishes **CodexBar follows** from **System**.
+  **Hide personal information** uses the same numbered account and workspace labels as the account switcher.
+  Authorized OpenAI Code review usage remains on the followed account's row; sibling rows never inherit it,
+  and same-email ambiguity keeps the existing display-only dashboard policy.
+- Refresh an individual row or choose **Refresh all accounts** to visit every account in batches of up to six,
+  without changing the followed account or promoting credentials to System. The provider header keeps its existing
+  account-scoped refresh, including credits and OpenAI web extras. Zero or one account, and ambient PAT mode, keep
+  the single-account presentation. Local token/cost usage appears once, with its current-profile or **This Mac** scope.
 - Reusing OpenCode OAuth enables remote account quota, not OpenCode session token/cost ingestion. See
   [OpenCode with Codex or OpenAI](opencode.md#using-opencode-with-codex-or-openai) for the current history boundary.
 
@@ -137,6 +147,21 @@ It does not renew expired credentials or enable unscoped fallback for managed wo
 use the affected row's **Reauthenticate** action or ordinary `codex login` scoped to that managed home
 and intended workspace. A future CLI renewal command needs staged login and identity/workspace
 validation before committing; `promote` is not a renewal workaround. See [CLI details](cli.md#managed-codex-accounts-macos).
+
+### Local account discovery
+
+`codexbar serve` exposes saved managed Codex accounts through `GET /accounts` and
+`GET /accounts/<id>`, alongside configured provider token accounts. Discovery reads the existing
+managed-account metadata only: it never opens managed homes, reads `auth.json`, migrates storage,
+refreshes usage, or switches accounts. System and advanced profile-home accounts are not included.
+The `active` flag means selected in CodexBar, not necessarily the system Codex identity.
+
+IDs remain stable across identity modes; treat them as opaque lookup keys. Without an explicit
+`--identity`, discovery follows the app's **Hide personal information** setting per request.
+Redacted mode replaces arbitrary labels with account placeholders and hides email local parts.
+Credentials, private paths, fingerprints, and provider-internal workspace IDs are never exported.
+See the [account discovery HTTP contract](dashboard-api.md#account-discovery) for authentication,
+response fields, and errors.
 
 ### Advanced profile-home accounts
 - Managed Codex accounts remain the default multi-account path.
@@ -510,6 +535,13 @@ the local result and returns a nonzero exit code. See [CLI host reporting](cli.m
   parsed token rows or replay checkpoints, so compatible predecessor caches do not need a rebuild.
 
 ### Usage & Spend session rows
+
+Native Codex sessions with validated completed turns show whole-turn output, median model-first-token latency,
+and median duration below the cost-ranked header. The optional **Performance details** disclosure includes
+sample counts, percentile and cache coverage, and model/effort groups. Timing follows the selected completion
+day; billing keeps its existing request dates and range totals. No timing appears when samples are unavailable.
+Whole-turn output includes reasoning, tools, and waits; first model token can precede visible answer text.
+See the [metric contract and synthetic verification](spend-turn-performance-validation.md).
 
 Projects are grouped by account source and full directory identity, so equal folder names stay separate and
 renaming a project does not split its totals. Project and session rows use saved names from the selected Codex

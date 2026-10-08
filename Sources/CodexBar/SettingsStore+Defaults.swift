@@ -630,8 +630,19 @@ extension SettingsStore {
     }
 
     var menuBarShowsHighestUsage: Bool {
-        get { self.defaultsState.menuBarShowsHighestUsage }
-        set { self.setDefault(\.menuBarShowsHighestUsage, newValue, key: "menuBarShowsHighestUsage") }
+        get { self.unifiedIconSource == .highestUsage }
+        set { self.unifiedIconSource = newValue ? .highestUsage : .currentSelection }
+    }
+
+    var unifiedIconSource: UnifiedIconSource {
+        get {
+            self.defaultsState.unifiedIconSourceRaw.flatMap(UnifiedIconSource.init(rawValue:))
+                ?? (self.defaultsState.menuBarShowsHighestUsage ? .highestUsage : .currentSelection)
+        }
+        set {
+            self.setDefault(\.unifiedIconSourceRaw, newValue.rawValue, key: "unifiedIconSource")
+            self.setDefault(\.menuBarShowsHighestUsage, newValue == .highestUsage, key: "menuBarShowsHighestUsage")
+        }
     }
 
     var claudeOAuthKeychainPromptMode: ClaudeOAuthKeychainPromptMode {

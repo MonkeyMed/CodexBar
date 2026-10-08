@@ -408,6 +408,7 @@ enum CostUsageScanner {
         var lastLedgerTotal: CostUsageCodexTotals?
         var lastLegacyTotal: CostUsageCodexTotals?
         var countedUsage: CostUsageCodexTotals?
+        var turnPerformance: [String: CodexTurnPerformanceState]?
 
         mutating func clearPendingMirrors(when shouldClear: Bool = true) {
             guard shouldClear else { return }
@@ -3467,6 +3468,7 @@ enum CostUsageScanner {
         let cwd: String?
         let title: String?
         var turnID: String?
+        var reasoningEffort: String?
     }
 
     struct CodexTokenCountRecord: Codable, Equatable {
@@ -3495,8 +3497,10 @@ enum CostUsageScanner {
         case interAgentCommunication(triggerTurn: Bool)
         case threadSettingsApplied(priority: Bool)
         case taskStarted(turnID: String?)
+        case taskCompleted(CodexTurnPerformanceCompletion)
         case tokenCount(CodexTokenCountRecord)
         case tokenUsageRecord(CodexRequestUsageRecord)
+        case invalidRequestUsage(CodexInvalidRequestUsage)
         /// Bare usage is counted immediately; replay only its effect on mirror adjacency.
         case mirrorBoundary
 
@@ -3516,8 +3520,10 @@ enum CostUsageScanner {
 
         var requiresValidTimestamp: Bool {
             switch self {
-            case .sessionMeta, .mirrorBoundary:
+            case .sessionMeta, .invalidRequestUsage, .mirrorBoundary:
                 false
+            case let .taskCompleted(completion):
+                completion.completedAtUnixMs != nil
             case .turnContext, .interAgentCommunication, .threadSettingsApplied, .taskStarted, .tokenCount,
                  .tokenUsageRecord:
                 true
@@ -3548,6 +3554,7 @@ enum CostUsageScanner {
     private static let codexJSONFieldInputTokens = Array("input_tokens".utf8)
     private static let codexJSONFieldLastTokenUsage = Array("last_token_usage".utf8)
     private static let codexJSONFieldModel = Array("model".utf8)
+    private static let codexJSONFieldEffort = Array("effort".utf8)
     private static let codexJSONFieldModelName = Array("model_name".utf8)
     private static let codexJSONFieldOutputTokens = Array("output_tokens".utf8)
     private static let codexJSONFieldOrdinal = Array("ordinal".utf8)
@@ -3688,7 +3695,15 @@ enum CostUsageScanner {
                         ?? string(Self.codexJSONFieldCurrentWorkingDirectoryCamel, in: payload),
                     title: string(Self.codexJSONFieldTitle, in: payload)
                         ?? string(Self.codexJSONFieldName, in: payload),
-                    turnID: payload.flatMap { Self.codexTurnID(from: buffer, in: $0) }))
+                    turnID: payload.flatMap { Self.codexTurnID(from: buffer, in: $0) },
+                    reasoningEffort: payload.flatMap {
+                        Self.extractJSONByteStringField(
+                            Self.codexJSONFieldEffort,
+                            from: buffer,
+                            in: $0,
+                            atDepth: 1,
+                            allowingEscapedKeys: true)
+                    }))
             case "inter_agent_communication_metadata":
                 guard let payload,
                       let triggerTurn = Self.extractJSONByteBoolField(
@@ -3699,7 +3714,7 @@ enum CostUsageScanner {
                 guard let payload, let payloadType = string(Self.codexJSONFieldType, in: payload)
                 else { return nil }
                 let turnID = Self.codexTurnID(from: buffer, in: payload)
-                if payloadType == "thread_settings_applied" {
+                if payloadType == "thread_settings_applied" || payloadType == "task_complete" {
                     guard let decoded = (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any]
                     else { return nil }
                     return Self.codexLine(from: decoded)
@@ -3723,14 +3738,27 @@ enum CostUsageScanner {
 
     private static func codexLine(from object: [String: Any]) -> CodexFastLine? {
         if let metadata = codexSessionMetadata(from: object) { return .sessionMeta(metadata) }
+        let payload = object["payload"] as? [String: Any] ?? [:]
         guard let timestamp = object["timestamp"] as? String,
               Self.dayKeyFromTimestamp(timestamp) ?? Self.dayKeyFromParsedISO(timestamp) != nil
-        else { return nil }
-        let payload = object["payload"] as? [String: Any] ?? [:]
+        else {
+            // Invalid timestamps still prove that a known owned turn has incomplete usage or timing.
+            // These markers never enter the billing ledger.
+            if object["type"] as? String == "token_usage_record" {
+                return Self.codexRejectedRequestUsage(payload).map(CodexFastLine.invalidRequestUsage)
+            }
+            if object["type"] as? String == "event_msg", payload["type"] as? String == "task_complete" {
+                return Self.codexTurnCompletion(
+                    payload: payload,
+                    timestamp: object["timestamp"] as? String ?? "").map(CodexFastLine.taskCompleted)
+            }
+            return nil
+        }
         let info = payload["info"] as? [String: Any]
         switch object["type"] as? String {
         case "token_usage_record":
-            return Self.codexRequestUsageRecord(from: object).map(CodexFastLine.tokenUsageRecord)
+            if let record = Self.codexRequestUsageRecord(from: object) { return .tokenUsageRecord(record) }
+            return Self.codexRejectedRequestUsage(payload).map(CodexFastLine.invalidRequestUsage)
         case "inter_agent_communication_metadata":
             return .interAgentCommunication(triggerTurn: payload["trigger_turn"] as? Bool == true)
         case "turn_context":
@@ -3745,7 +3773,8 @@ enum CostUsageScanner {
                     ?? payload["current_working_directory"] as? String
                     ?? payload["currentWorkingDirectory"] as? String,
                 title: payload["title"] as? String ?? payload["name"] as? String,
-                turnID: Self.codexTurnID(from: payload)))
+                turnID: Self.codexTurnID(from: payload),
+                reasoningEffort: payload["effort"] as? String))
         case "event_msg":
             if payload["type"] as? String == "thread_settings_applied" {
                 let settings = payload["thread_settings"] as? [String: Any]
@@ -3754,6 +3783,9 @@ enum CostUsageScanner {
             }
             if payload["type"] as? String == "task_started" {
                 return .taskStarted(turnID: Self.codexTurnID(from: payload))
+            }
+            if payload["type"] as? String == "task_complete" {
+                return Self.codexTurnCompletion(payload: payload, timestamp: timestamp).map(CodexFastLine.taskCompleted)
             }
             guard payload["type"] as? String == "token_count" else { return nil }
             func totals(_ usage: [String: Any]) -> CostUsageCodexTotals {
@@ -3841,6 +3873,16 @@ enum CostUsageScanner {
             usage: usage,
             threadTotal: total,
             turnTotal: turnTotal.flatMap { Self.codexTotalsAtLeast($0, usage) ? $0 : nil })
+    }
+
+    private static func codexRejectedRequestUsage(_ payload: [String: Any]) -> CodexInvalidRequestUsage? {
+        guard let threadID = codexModelEvidence(payload["thread_id"] as? String) else { return nil }
+        let sessionID = Self.codexModelEvidence(payload["session_id"] as? String)
+        guard payload["session_id"] == nil || sessionID != nil else { return nil }
+        return CodexInvalidRequestUsage(
+            threadID: threadID,
+            sessionID: sessionID,
+            turnID: Self.codexTurnID(from: payload))
     }
 
     private static func codexRequestUsage(_ usage: [String: Any]) -> CostUsageCodexTotals? {
@@ -4280,6 +4322,12 @@ enum CostUsageScanner {
             }
             // Borrowed pending evidence must not become a replay record's own persisted evidence.
             guard !isReplay else { return deferredMirror }
+            if let turnID {
+                if requestLedger.turnPerformance == nil { requestLedger.turnPerformance = [:] }
+                var performance = requestLedger.turnPerformance?[turnID] ?? CodexTurnPerformanceState()
+                performance.reportedOutputTokens = record.turnTotal?.output
+                requestLedger.turnPerformance?[turnID] = performance
+            }
             let model = record.model
                 ?? turnID.flatMap { requestLedger.turnModels[$0] }
                 ?? (turnID == currentTurnID || turnID == requestLedger.activeTurnID
@@ -4802,6 +4850,25 @@ enum CostUsageScanner {
             requestLedger.pendingLegacyNearMirror = mirror?.near
         }
 
+        func observePerformanceEffort(_ metadata: CodexTurnContextMetadata) {
+            guard !suppressUnownedCopiedPrefix, let turnID = metadata.turnID else { return }
+            if requestLedger.turnPerformance == nil { requestLedger.turnPerformance = [:] }
+            var performance = requestLedger.turnPerformance?[turnID] ?? CodexTurnPerformanceState()
+            performance.observeReasoningEffort(metadata.reasoningEffort)
+            requestLedger.turnPerformance?[turnID] = performance
+        }
+
+        func markRejectedPerformanceUsage(_ record: CodexInvalidRequestUsage) {
+            guard !suppressUnownedCopiedPrefix, record.threadID == sessionId,
+                  record.sessionID == nil || record.sessionID == (requestLedger.sessionID ?? sessionId),
+                  let turnID = record.turnID ?? currentTurnID ?? requestLedger.activeTurnID
+            else { return }
+            if requestLedger.turnPerformance == nil { requestLedger.turnPerformance = [:] }
+            var performance = requestLedger.turnPerformance?[turnID] ?? CodexTurnPerformanceState()
+            performance.hasRejectedUsage = true
+            requestLedger.turnPerformance?[turnID] = performance
+        }
+
         @discardableResult
         func processFastLine(
             _ fastLine: CodexFastLine,
@@ -4826,6 +4893,7 @@ enum CostUsageScanner {
                 if let turnID = metadata.turnID, let model = Self.codexModelEvidence(currentModel) {
                     requestLedger.turnModels[turnID] = model
                 }
+                observePerformanceEffort(metadata)
             case .interAgentCommunication:
                 break
             case let .threadSettingsApplied(priority):
@@ -4841,6 +4909,13 @@ enum CostUsageScanner {
                 } else {
                     requestLedger.priorityTurnIDs?.remove(turnID ?? "")
                 }
+                if let turnID { requestLedger.turnPerformance?[turnID]?.completion = nil }
+            case let .taskCompleted(completion):
+                guard !suppressUnownedCopiedPrefix else { return nil }
+                if requestLedger.turnPerformance == nil { requestLedger.turnPerformance = [:] }
+                var performance = requestLedger.turnPerformance?[completion.turnID] ?? CodexTurnPerformanceState()
+                performance.completion = completion
+                requestLedger.turnPerformance?[completion.turnID] = performance
             case let .tokenCount(record):
                 try handleTokenCount(record, sourceEndOffset: sourceEndOffset)
             case let .tokenUsageRecord(record):
@@ -4848,6 +4923,8 @@ enum CostUsageScanner {
                     record,
                     endOffset: sourceEndOffset,
                     deferredMirror: deferredMirror)
+            case let .invalidRequestUsage(record):
+                markRejectedPerformanceUsage(record)
             }
             return nil
         }
@@ -5029,6 +5106,7 @@ enum CostUsageScanner {
                     if line.bytes.containsAscii(#""type":"event_msg""#),
                        !line.bytes.containsAscii(#""token_count""#),
                        !line.bytes.containsAscii(#""task_started""#),
+                       !line.bytes.containsAscii(#""task_complete""#),
                        !line.bytes.containsAscii(#""thread_settings_applied""#)
                     {
                         return
@@ -5131,7 +5209,7 @@ enum CostUsageScanner {
                     case .tokenCount, .tokenUsageRecord:
                         guard let record = buffered.line.boundaryTokenCount else { return nil }
                         kind = .tokenCount(total: record.total, last: record.last)
-                    case .taskStarted, .threadSettingsApplied, .mirrorBoundary:
+                    case .taskStarted, .taskCompleted, .invalidRequestUsage, .threadSettingsApplied, .mirrorBoundary:
                         return nil
                     }
                     return Self.CodexSubagentRolloutShape.Observation(
@@ -5339,6 +5417,7 @@ enum CostUsageScanner {
                 && requestLedger.sessionID == sessionId && requestLedger.threadPriority == nil
                 && requestLedger.priorityTurnIDs?.isEmpty != false
                 && requestLedger.lastLedgerTotal == nil && requestLedger.lastLegacyTotal == nil
+                && (requestLedger.turnPerformance?.isEmpty ?? true)
                 ? nil : requestLedger,
             replacedLegacyRowIndices: replacedLegacyRowIndices,
             ledgerLegacyPricingKeys: ledgerLegacyPricingKeys)
