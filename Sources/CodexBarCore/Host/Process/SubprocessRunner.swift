@@ -210,10 +210,6 @@ public enum SubprocessRunner {
         let processGroup: pid_t? = setpgid(pid, pid) == 0 || getpgid(pid) == pid ? pid : nil
         defer { ownership?.reap(processGroup: processGroup) }
 
-        let exitCodeTask = Task<Int32, Never> {
-            await termination.wait()
-        }
-
         let killedByTimeout = TimeoutState()
         if timeout.isFinite {
             let timeoutTimer = DispatchSource.makeTimerSource(queue: self.timeoutQueue)
@@ -234,7 +230,7 @@ public enum SubprocessRunner {
         do {
             let exitCode = try await withTaskCancellationHandler {
                 try Task.checkCancellation()
-                let code = await exitCodeTask.value
+                let code = await termination.wait()
                 try Task.checkCancellation()
                 return code
             } onCancel: {
@@ -288,7 +284,6 @@ public enum SubprocessRunner {
                 metadata: logMetadata(duration: duration))
             // Safety net: ensure the process is dead (may already be killed by timeout timer).
             self.terminateProcess(process, processGroup: processGroup)
-            exitCodeTask.cancel()
             stdoutCapture.stop()
             stderrCapture.stop()
             throw error

@@ -24,8 +24,9 @@ struct ProcessExitReleaseLinuxTests {
 
     @Test
     func `process requested for release while running is released after it exits`() async throws {
-        let child = try Self.launch(executable: "/bin/sleep", arguments: ["0.3"]) { process, stdin in
+        let child = try Self.launch(executable: "/bin/cat", arguments: []) { process, stdin in
             #expect(process.isRunning)
+            ProcessExitRelease.afterExit(process)
             ProcessExitRelease.afterExit(process)
             stdin.close()
         }
@@ -34,6 +35,20 @@ struct ProcessExitReleaseLinuxTests {
         #expect(
             await Self.waitUntil { Self.openPipes().isDisjoint(with: child.pipes) },
             "Output pipe descriptors stayed open after the process exited")
+    }
+
+    @Test
+    func `repeated RPC teardown returns every output descriptor`() async throws {
+        let children = try (0..<60).map { _ in
+            try Self.launch(executable: "/bin/cat", arguments: []) { process, stdin in
+                RPCChildProcessTeardown.terminate(process: process, stdin: stdin)
+            }
+        }
+        let pipes = Set(children.flatMap(\.pipes))
+        #expect(await Self.waitUntil { children.allSatisfy { !$0.isProcessAlive() } })
+        #expect(await Self.waitUntil { Self.openPipes().isDisjoint(with: pipes) })
+        print("RPC teardown samples=60 retainedProcesses=\(children.filter { $0.isProcessAlive() }.count) "
+            + "retainedOutputPipes=\(Self.openPipes().intersection(pipes).count)")
     }
 
     /// Mirrors the RPC clients: the caller only keeps the pipes and process for the duration of `body`.
