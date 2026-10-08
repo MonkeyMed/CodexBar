@@ -978,11 +978,11 @@ private final class CodexRPCClient: @unchecked Sendable {
             throw RPCWireError.startFailed(throttled ?? message)
         }
 
-        self.output.start(process: self.process, stdin: self.stdin, onOversizedLine: {
+        self.output.start(process: self.process, stdin: self.stdin) {
             Self.log.warning("Codex RPC line exceeded memory limit; terminating process")
-        }, onStderr: { line in
+        } onStderr: { line in
             Self.log.debug("[codex stderr] \(line)")
-        })
+        }
     }
 
     func initialize(clientName: String, clientVersion: String) async throws {
