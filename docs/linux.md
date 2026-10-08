@@ -8,7 +8,7 @@ read_when:
 # Linux desktop
 
 The Linux desktop is a lightweight Qt shell over the shared CodexBar CLI. See the
-[Linux guide](../Integrations/Linux/README.md) for installation, settings, the local
+[Linux guide](https://github.com/steipete/CodexBar/blob/main/Integrations/Linux/README.md) for installation, settings, the local
 socket interface, and isolated runtime tests.
 
 Ordinary launch and `codexbar-linux --usage` open Usage & Spend. Open the compact
