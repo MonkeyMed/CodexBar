@@ -9,14 +9,24 @@ public struct JetBrainsQuotaInfo: Sendable, Equatable {
     public let maximum: Double
     public let available: Double
     public let until: Date?
+    /// Purchased top-up credits, kept apart from the monthly tariff balance above.
+    public let topUp: JetBrainsTopUpQuota?
 
-    public init(type: String?, used: Double, maximum: Double, available: Double?, until: Date?) {
+    public init(
+        type: String?,
+        used: Double,
+        maximum: Double,
+        available: Double?,
+        until: Date?,
+        topUp: JetBrainsTopUpQuota? = nil)
+    {
         self.type = type
         self.used = used
         self.maximum = maximum
         // Use available if provided, otherwise calculate from maximum - used
         self.available = available ?? max(0, maximum - used)
         self.until = until
+        self.topUp = topUp
     }
 
     /// Percentage of quota that has been used (0-100)
@@ -29,6 +39,31 @@ public struct JetBrainsQuotaInfo: Sendable, Equatable {
     public var remainingPercent: Double {
         guard self.maximum > 0 else { return 100 }
         return min(100, max(0, (self.available / self.maximum) * 100))
+    }
+}
+
+public struct JetBrainsTopUpQuota: Sendable, Equatable {
+    /// The IDE stores 1.00 displayed credit as 100,000 quota units (10.00 monthly credits = 1,000,000).
+    public static let unitsPerCredit: Double = 100_000
+
+    public let maximum: Double
+    public let available: Double
+
+    public init(maximum: Double, available: Double) {
+        self.maximum = maximum
+        self.available = available
+    }
+
+    /// Only finite, nonnegative balances with a positive maximum describe purchased credits.
+    init?(current: Double?, maximum: Double?, available: Double?) {
+        guard let maximum, maximum.isFinite, maximum > 0 else { return nil }
+        let resolved = available ?? current.map { maximum - $0 }
+        guard let resolved, resolved.isFinite, resolved >= 0 else { return nil }
+        self.init(maximum: maximum, available: min(resolved, maximum))
+    }
+
+    public var availableCredits: Double {
+        self.available / Self.unitsPerCredit
     }
 }
 
@@ -73,10 +108,20 @@ public struct JetBrainsStatusSnapshot: Sendable {
             accountOrganization: self.detectedIDE?.displayName,
             loginMethod: self.quotaInfo.type)
 
+        // Top-up credits are a balance, not a window: JetBrains only spends them after the monthly quota.
+        let details = try self.quotaInfo.topUp.map { topUp in
+            try [ProviderDetailSection(title: "Top-up credits", rows: [
+                ProviderDetailSection.Row(
+                    label: "Remaining",
+                    value: String(format: "%.2f credits", topUp.availableCredits)),
+            ])]
+        } ?? []
+
         return UsageSnapshot(
             primary: primary,
             secondary: nil,
             tertiary: nil,
+            details: details,
             updatedAt: Date(),
             identity: identity)
     }
@@ -272,12 +317,18 @@ public struct JetBrainsStatusProbe: Sendable {
             } ? quota : nil
         }
         let quota = tariffQuota ?? json
+        let topUpQuota = json["topUpQuota"] as? [String: Any]
+        let topUpValue = { (key: String) in (topUpQuota?[key] as? String).flatMap(Double.init) }
         return JetBrainsQuotaInfo(
             type: json["type"] as? String,
             used: (quota["current"] as? String).flatMap(Double.init) ?? 0,
             maximum: (quota["maximum"] as? String).flatMap(Double.init) ?? 0,
             available: (tariffQuota?["available"] as? String).flatMap(Double.init),
-            until: ISO8601DateParser.parse(json["until"] as? String))
+            until: ISO8601DateParser.parse(json["until"] as? String),
+            topUp: JetBrainsTopUpQuota(
+                current: topUpValue("current"),
+                maximum: topUpValue("maximum"),
+                available: topUpValue("available")))
     }
 
     private static func parseRefillInfoJSON(_ jsonString: String) throws -> JetBrainsRefillInfo {
