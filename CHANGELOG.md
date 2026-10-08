@@ -19,6 +19,7 @@
 
 ### Fixed
 
+- Linux: release exited Codex and Grok RPC child processes so their stdout/stderr pipes close, preventing long-running `codexbar serve` from exhausting file descriptors.
 - Usage & Spend: reduce annual token activity update work by reusing calendar dates, coverage, and localized date formatters without changing chart output (#4328). Thanks @Yuxin-Qiao!
 - Notion AI: recover usage for a configured workspace when large workspace/member lists exceed the plugin response limit, and explain how to configure a workspace when needed (#4341). Thanks @optemism!
 - Codex: ignore commented-out usage endpoint overrides, so disabled proxies cannot shadow active configuration or the default endpoint (#4330). Thanks @lishouxian!
