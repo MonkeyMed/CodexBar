@@ -476,16 +476,15 @@ enum WidgetDateText {
 
     static func reset(_ date: Date) -> Text {
         if #available(macOS 15, *) {
-            // Only system format styles can be decoded by the out-of-process WidgetKit host.
-            // The ending range clamps to zero after reset instead of counting upwards again.
-            return Text("Resets in \(Text(.dateRange(endingAt: date), format: self.resetFormat()))")
+            // System date references update visually in the out-of-process WidgetKit host.
+            return Text("Resets \(Text(.currentDate, format: self.resetFormat(date)))")
         }
         return Text("Resets in \(Text(date, style: .relative))")
     }
 
     @available(macOS 15, *)
-    static func resetFormat() -> Date.ComponentsFormatStyle {
-        .init(style: .narrow, fields: [.day, .hour, .minute])
+    static func resetFormat(_ date: Date) -> SystemFormatStyle.DateReference {
+        .init(to: date, allowedFields: [.day, .hour, .minute], maxFieldCount: 2, thresholdField: .minute)
     }
 }
 

@@ -9,8 +9,8 @@ read_when:
 # Widgets
 
 ## Snapshot pipeline
-- Quota headlines follow the menu layout: `Weekly 93% left` and `Resets in 5d 23h` above the bar. Reset text moves below the headline when the tile is too narrow.
-- On macOS 15+, snapshot ages and reset countdowns use live SwiftUI date text with minute precision; WidgetKit advances the text without requesting extra timeline reloads. Reset ranges stop at `0m` after expiration. macOS 14 retains native relative-date text for compatibility.
+- Quota headlines follow the menu layout: `Weekly 93% left` and `Resets in 1 minute` above the bar. Reset text moves below the headline when the tile is too narrow.
+- On macOS 15+, snapshot ages and reset countdowns use live SwiftUI date text with minute precision; WidgetKit advances the text without requesting extra timeline reloads. Reset references reach `now` at expiration and identify elapsed resets afterward. macOS 14 retains native relative-date text for compatibility.
 - `WidgetSnapshotStore` writes compact JSON snapshots to the app-group container.
 - Widgets read the snapshot and render usage/credits/history states.
 - Usage and Switcher tiles emphasize the most constrained general quota, preserve other allowances as detail rows, and show full provider names. Code-review and model-specific allowances do not replace a provider's general quota headline. Providers without quota bars keep credits or local-cost information useful.

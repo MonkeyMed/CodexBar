@@ -1,22 +1,22 @@
 [
   {
-    "at": "2026-10-08T08:30:33.513Z",
-    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 5 minutes Weekly 93% left Resets in 1m\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
+    "at": "2026-10-08T09:06:50.494Z",
+    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 5 minutes Weekly 93% left Resets in 1 minute\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
     "file": "01-before-minute.png"
   },
   {
-    "at": "2026-10-08T08:31:42.306Z",
-    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 6 minutes Weekly 93% left Resets in 0m\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
+    "at": "2026-10-08T09:08:27.497Z",
+    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 7 minutes Weekly 93% left Resets now\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
     "file": "02-next-minute.png"
   },
   {
-    "at": "2026-10-08T08:32:39.123Z",
-    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 7 minutes Weekly 93% left Resets in 0m\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
-    "file": "03-expired-reset.png"
+    "at": "2026-10-08T09:09:13.643Z",
+    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 7 minutes Weekly 93% left Resets 1 minute ago\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
+    "file": "03-reset-past.png"
   },
   {
-    "at": "2026-10-08T08:34:03.095Z",
-    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 8 minutes Weekly 93% left Resets in 0m\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
-    "file": "04-zero-stays-zero.png"
+    "at": "2026-10-08T09:10:42.359Z",
+    "ax": "Window: \"CodexBar Switcher\", App: Notification Center.\n0 window CodexBar Switcher, Secondary Actions: Raise\n\t1 container Description: CodexBarWidgetProof, ID: widget-local:com.steipete.codexbar.debug:com.steipete.codexbar.debug.widget:CodexBarSwitcherWidget\n\t\t2 text Codex, selected Codex 9 minutes Weekly 93% left Resets 3 minutes ago\n3 menu bar\n\t4 Notification Center\n\t5 File\n\t6 Edit\n\t7 Format\n",
+    "file": "04-reset-continues.png"
   }
 ]

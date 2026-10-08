@@ -20,14 +20,17 @@ struct WidgetDateTextTests {
     }
 
     @Test
-    func `system reset format has compact minute precision and a zero endpoint`() {
+    func `system reset reference advances without seconds and identifies expiration`() throws {
         guard #available(macOS 15, *) else { return }
         let reset = Date(timeIntervalSince1970: 1_700_000_000)
-        let style = WidgetDateText.resetFormat().locale(Locale(identifier: "en_US"))
-        #expect(style.format(reset.addingTimeInterval(-(5 * 86400 + 23 * 3600))..<reset) == "5d 23h")
-        #expect(style.format(reset.addingTimeInterval(-61)..<reset) == "1m")
-        #expect(style.format(reset.addingTimeInterval(-60)..<reset) == "1m")
-        #expect(style.format(reset.addingTimeInterval(-59)..<reset) == "0m")
-        #expect(style.format(reset..<reset) == "0m")
+        let style = WidgetDateText.resetFormat(reset).locale(Locale(identifier: "en_US"))
+        let now = reset.addingTimeInterval(-110)
+        let next = try #require(style.discreteInput(after: now))
+        #expect(next > now)
+        #expect(next.timeIntervalSince(now) <= 60)
+        #expect(style.format(next) != style.format(now))
+        #expect(!String(style.format(now).characters).contains("second"))
+        #expect(String(style.format(reset).characters) == "now")
+        #expect(String(style.format(reset.addingTimeInterval(120)).characters).contains("ago"))
     }
 }
