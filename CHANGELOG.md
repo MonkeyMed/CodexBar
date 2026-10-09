@@ -4,6 +4,7 @@
 
 ### Added
 
+- Widgets: show minute-only live dates on macOS 15+ and place localized quota percentages beside reset references, with stacked headlines on narrow tiles (#4361). Thanks @brzvsk!
 - Codex: add a read-only core resolver for explicitly selected managed accounts, returning fresh access credentials after account, workspace, and home validation (#4360). Thanks @zieglar!
 - Linux: add an opt-in compact Quick View with provider tabs and cached spending warnings, keeping the full Usage & Spend window as the default (#3973). Thanks @stackingrockss!
 - Localization: complete app and widget translations in all 23 supported languages, including credential alerts, share cards, and provider settings, with widgets following the system language (#4223). Thanks @DGPisces and @Yuxin-Qiao!
