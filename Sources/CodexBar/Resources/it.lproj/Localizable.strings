@@ -2485,3 +2485,5 @@
 "spend_tools_help" = "Conta le operazioni native, non le chiamate di orchestrazione del modello. Un codice di uscita diverso da zero non significa che l’attività sia fallita. Si preferisce la durata nativa; gli intervalli registrati sono indicati esplicitamente. Le durate delle operazioni parallele non vengono sommate alla durata dell’attività.";
 "spend_tools_raw_preview" = "Anteprima della voce originale";
 "spend_tools_milliseconds" = "%@ ms";
+"Credit balance" = "Saldo crediti";
+"Monthly credits used" = "Crediti utilizzati questo mese";

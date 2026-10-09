@@ -2474,3 +2474,5 @@
 "spend_tools_help" = "统计原生操作，不重复计算模型调度调用。非零退出码不代表任务失败。优先使用工具原生耗时，起止记录间隔会另行标注。并行操作的耗时不会相加为任务总耗时。";
 "spend_tools_raw_preview" = "原始记录预览";
 "spend_tools_milliseconds" = "%@ 毫秒";
+"Credit balance" = "额度余额";
+"Monthly credits used" = "本月已用额度";

@@ -2459,3 +2459,5 @@
 "spend_tools_help" = "統計原生操作，不重複計算模型調度呼叫。非零結束代碼不代表任務失敗。優先使用工具原生耗時，起止記錄間隔會另行標示。平行操作的耗時不會相加為任務總耗時。";
 "spend_tools_raw_preview" = "原始記錄預覽";
 "spend_tools_milliseconds" = "%@ 毫秒";
+"Credit balance" = "額度餘額";
+"Monthly credits used" = "本月已用額度";
