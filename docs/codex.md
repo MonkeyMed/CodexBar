@@ -104,6 +104,8 @@ Usage source picker:
 - Settings → Providers → Codex shows each visible account's saved usage when multiple OAuth accounts are available.
   Opening the pane reads the retained snapshots without starting a refresh. Each row keeps its own usage age and
   error, including accounts not fetched yet, and distinguishes **CodexBar follows** from **System**.
+  The first failed refresh after managed credentials rotate shows its authentication error. Another rotation
+  discards the previous credentials' error, even when the saved account metadata has not changed.
   **Hide personal information** uses the same numbered account and workspace labels as the account switcher.
   Authorized OpenAI Code review usage remains on the followed account's row; sibling rows never inherit it,
   and same-email ambiguity keeps the existing display-only dashboard policy.
@@ -135,10 +137,14 @@ emails require the UUID. The app and CLI share the same preservation and workspa
 live credentials are saved before an owner-only atomic replacement, and detected changes to either
 auth file abort the replacement. A nonblocking process lock serializes participating account writers
 and is released automatically after a crash. External Codex processes do not share that lock.
-Preservation also checks legacy email-only destinations and rechecks saved authentication before
-replacing or deleting a managed destination. Read failures or conflicting credentials abort the promotion.
+Preservation checks every selectable repair destination—provider-keyed or legacy email-only—and
+rechecks saved authentication before replacing or deleting a managed destination. Read failures or
+conflicting credentials abort the promotion.
 Refreshed copies are read back before their fingerprints are committed, and every preserved copy is checked
 again immediately before the live replacement. External writers can still race after the final read.
+
+Saved-account removal and import repair retain an old managed home while another saved record references
+the same path. Cleanup still requires the managed-home safety checks and releases the home after its last reference.
 
 CLI promotion reads local files only and never requests Keychain access or starts login. It leaves
 the app's display selection and running Codex processes alone; `CODEX_HOME` selects the live destination.
