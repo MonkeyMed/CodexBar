@@ -148,6 +148,8 @@
 "Could not start codex login" = "No s'ha pogut iniciar codex login";
 "Could not switch system account" = "No s'ha pogut canviar el compte del sistema";
 "Credits" = "Crèdits";
+"Top-up credits" = "Crèdits de recàrrega";
+"Remaining" = "Restant";
 "Individual credits" = "Crèdits individuals";
 "Workspace" = "Espai de treball";
 "Credits history" = "Historial de crèdits";
@@ -2441,3 +2443,5 @@
 "show_most_used_provider_subtitle" = "La barra de menús mostra automàticament el proveïdor més a prop del seu límit.";
 
 "show_most_used_provider_title" = "Mostreu el proveïdor més utilitzat";
+"Credit balance" = "Saldo de crèdits";
+"Monthly credits used" = "Crèdits utilitzats aquest mes";

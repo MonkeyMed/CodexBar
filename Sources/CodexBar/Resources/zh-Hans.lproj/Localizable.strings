@@ -165,6 +165,8 @@
 "Could not start codex login" = "无法启动 codex login";
 "Could not switch system account" = "无法切换系统账户";
 "Credits" = "额度";
+"Top-up credits" = "加购额度";
+"Remaining" = "剩余";
 "Individual credits" = "个人额度";
 "Workspace" = "工作区";
 "Credits history" = "额度记录";
@@ -2430,3 +2432,5 @@
 "show_most_used_provider_subtitle" = "菜单栏会自动显示最接近速率限制的提供商。";
 
 "show_most_used_provider_title" = "显示用量最高的提供商";
+"Credit balance" = "额度余额";
+"Monthly credits used" = "本月已用额度";

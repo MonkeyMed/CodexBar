@@ -161,6 +161,8 @@
 "Could not start codex login" = "No se pudo iniciar codex login";
 "Could not switch system account" = "No se pudo cambiar la cuenta del sistema";
 "Credits" = "Créditos";
+"Top-up credits" = "Créditos de recarga";
+"Remaining" = "Restante";
 "Individual credits" = "Créditos individuales";
 "Workspace" = "Espacio de trabajo";
 "Credits history" = "Historial de créditos";
@@ -2435,3 +2437,5 @@
 "show_most_used_provider_subtitle" = "La barra de menús muestra automáticamente el proveedor más cercano a su límite.";
 
 "show_most_used_provider_title" = "Mostrar el proveedor más usado";
+"Credit balance" = "Saldo de créditos";
+"Monthly credits used" = "Créditos usados este mes";

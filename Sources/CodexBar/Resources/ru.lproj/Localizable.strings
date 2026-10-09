@@ -163,6 +163,8 @@
 "Could not start codex login" = "Не удалось запустить вход в Codex";
 "Could not switch system account" = "Не удалось переключить системный аккаунт";
 "Credits" = "Кредиты";
+"Top-up credits" = "Дополнительные кредиты";
+"Remaining" = "Осталось";
 "Individual credits" = "Индивидуальные кредиты";
 "Workspace" = "Рабочая область";
 "Credits history" = "История кредитов";
@@ -2438,3 +2440,5 @@
 "show_most_used_provider_subtitle" = "В строке меню автоматически отображается провайдер, ближайший к лимиту.";
 
 "show_most_used_provider_title" = "Показывать провайдера с наибольшим использованием";
+"Credit balance" = "Баланс кредитов";
+"Monthly credits used" = "Кредиты, использованные за месяц";

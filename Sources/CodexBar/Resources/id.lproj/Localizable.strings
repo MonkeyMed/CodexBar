@@ -145,6 +145,8 @@
 "Could not start codex login" = "Tidak dapat memulai codex login";
 "Could not switch system account" = "Tidak dapat beralih akun sistem";
 "Credits" = "Kredit";
+"Top-up credits" = "Kredit isi ulang";
+"Remaining" = "Tersisa";
 "Individual credits" = "Kredit individual";
 "Workspace" = "Ruang kerja";
 "Credits history" = "Riwayat kredit";
@@ -2440,3 +2442,5 @@
 "show_most_used_provider_subtitle" = "Menu bar otomatis menampilkan penyedia yang paling dekat batas penggunaannya.";
 
 "show_most_used_provider_title" = "Tampilkan penyedia paling sering digunakan";
+"Credit balance" = "Saldo kredit";
+"Monthly credits used" = "Kredit terpakai bulan ini";
