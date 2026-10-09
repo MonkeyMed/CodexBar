@@ -101,5 +101,9 @@ enum ProviderImplementationManifest {
         PluginAPIKeyProviderImplementation(spec: LinkupProviderDescriptor.spec),
         PluginCookieProviderImplementation(spec: TinyApiProviderDescriptor.spec),
         PluginAPIKeyProviderImplementation(spec: ExaProviderDescriptor.spec),
+        PluginAPIKeyProviderImplementation(spec: CosmicProviderDescriptor.spec),
+        PluginAPIKeyProviderImplementation(spec: AerostackProviderDescriptor.spec),
+        PluginAPIKeyProviderImplementation(spec: SailResearchProviderDescriptor.spec),
+        PluginAPIKeyProviderImplementation(spec: SofyaProviderDescriptor.spec),
     ]
 }

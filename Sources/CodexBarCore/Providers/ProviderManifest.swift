@@ -101,5 +101,9 @@ public enum ProviderManifest {
         LinkupProviderDescriptor.descriptor,
         TinyApiProviderDescriptor.descriptor,
         ExaProviderDescriptor.descriptor,
+        CosmicProviderDescriptor.descriptor,
+        AerostackProviderDescriptor.descriptor,
+        SailResearchProviderDescriptor.descriptor,
+        SofyaProviderDescriptor.descriptor,
     ]
 }

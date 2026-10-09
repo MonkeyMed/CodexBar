@@ -115,6 +115,10 @@ public enum UsageProvider: String, CaseIterable, Sendable, Codable {
     case linkup
     case tinyapi
     case exa
+    case cosmic
+    case aerostack
+    case sailresearch
+    case sofya
 }
 
 // swiftformat:enable sortDeclarations

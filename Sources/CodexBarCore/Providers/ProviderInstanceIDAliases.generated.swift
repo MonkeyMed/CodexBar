@@ -99,6 +99,10 @@ extension ProviderInstanceID {
     public static let linkup = UsageProvider.linkup.instanceID
     public static let tinyapi = UsageProvider.tinyapi.instanceID
     public static let exa = UsageProvider.exa.instanceID
+    public static let cosmic = UsageProvider.cosmic.instanceID
+    public static let aerostack = UsageProvider.aerostack.instanceID
+    public static let sailresearch = UsageProvider.sailresearch.instanceID
+    public static let sofya = UsageProvider.sofya.instanceID
 }
 
 // swiftformat:enable sortDeclarations

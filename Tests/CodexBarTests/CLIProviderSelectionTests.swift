@@ -35,6 +35,10 @@ struct CLIProviderSelectionTests {
             "|linkup|",
             "|tinyapi|",
             "|exa|",
+            "|cosmic|",
+            "|aerostack|",
+            "|sailresearch|",
+            "|sofya|",
             "|both|",
             "|all]",
         ]
