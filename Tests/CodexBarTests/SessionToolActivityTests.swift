@@ -3,6 +3,19 @@ import Testing
 @testable import CodexBarCore
 
 struct SessionToolActivityTests {
+    @Test(arguments: [32, 9000])
+    func `error presence survives metadata string bounds`(length: Int) async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        try fixture.write([Self.record(id: "failed", type: "McpToolCall", extra: [
+            "status": "completed", "error": String(repeating: "x", count: length),
+        ])])
+        let snapshot = try await SessionToolActivityStore().load(source: fixture.source)
+        let operation = try #require(snapshot.operations.first)
+        #expect(operation.outcome == .toolError)
+        #expect(operation.needsAttention)
+    }
+
     @Test
     func `native operations are owned deduplicated and distinct from orchestration`() async throws {
         let fixture = try Fixture()

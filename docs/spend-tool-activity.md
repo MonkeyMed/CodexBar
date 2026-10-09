@@ -68,16 +68,6 @@ trees, retry inference, billing attribution, and other-provider support are outs
 English, Simplified Chinese, Traditional Chinese and Italian copy is supplied; other catalogs explicitly carry
 English fallback strings pending translation.
 
-## Synthetic UI examples
-
-These production SwiftUI renders use entirely fictitious session names, commands, timing and token
-samples. They illustrate the expanded content; the session's Tool activity section starts collapsed.
-They are separate from native app interaction checks and contain no personal log data.
-
-![Synthetic tool activity, wide light layout](images/spend-tool-activity-light.png)
-
-![Synthetic tool activity, narrow dark review filter](images/spend-tool-activity-dark.png)
-
 ## Validation
 
 Focused production parser/dashboard tests cover native ownership, repeated terminal updates, large
@@ -87,48 +77,18 @@ files, stale details, cancellation, bounded projection, provider isolation, and 
 The production SwiftUI content is rendered in English/Chinese, light/dark, 360/820 point widths and all
 three filters. These renders are separate from fresh-bundle interaction checks.
 
-An optimized standalone executable compiled the production metadata/index sources and existing
-production timestamp helper against authorized local log copies. Counts, timing coverage, and review
-outcomes matched the independent structure audit, with no dropped records in that sample. Private
-receipts, operation counts, timings, and paths stay in the ignored local proof directory. These
-measurements are from one machine with available filesystem cache and do not establish cold-disk
-timings, whole-app memory use, or coverage across all historical formats.
+Run with the repository's scrubbed test environment:
 
-## Native runtime and upgrade evidence
+```sh
+source Scripts/test_environment.sh
+swift test --build-system native --jobs 4 -Xswiftc -gnone \
+  --filter 'SessionToolActivity|SpendTool|CostUsage(RequestLedgerMigration|Store|CoverageCompatibility|PerformanceGate|Fetcher)|LocalizationLanguageCatalog|ProviderArchitectureGatekeeper'
+make check
+```
 
-[Native interaction transcript](fixtures/spend-tool-activity-native-transcript.json) is a redacted
-derivative of actual macOS accessibility observations from the packaged app, reading a byte-for-byte
-frozen copy of an existing native Codex session. No synthetic operations were added to that input.
-The app has an isolated bundle identifier and test profile, with account refresh and Keychain access
-disabled. The production dashboard, scanner, tool index, detail reader and privacy switch are used.
-
-The transcript records five successful checks: discover the real session, expand a command and compare
-its input/result with the source, compare MCP input/result JSON with the source, enable Hide personal
-info and inspect the masked details, then disable it and inspect the restored details. Private paths,
-identifiers, commands, arguments, results, dates, durations, operation counts, usage and cost are
-omitted or consistently aliased. Complete originals remain local. The artifact identifies the code
-revision, production Sources tree and packaged executable hash; later documentation changes do not
-alter that Sources tree. Early automation attempts that failed to reach the expected state are excluded.
-These short checks do not establish long-term stability or cover every native client schema.
-
-[Store upgrade regression receipt](fixtures/spend-tool-activity-upgrade-proof.json) uses entirely
-synthetic billing data. The new preservation test fails against the pre-fix implementation for the
-current-main fingerprint and passes after compatibility adoption is added. Both current-main and
-stable stores retain typed saved-pricing rows, ledger state and checkpoints across two opens after
-the original log is removed, with unchanged database identity and zero rebuilds. Existing regressions
-also cover previous report payloads, unfinished-line resume state and zero session-head reparses.
-
-## Stability validation
-
-[Stability receipt](fixtures/spend-tool-activity-stability-proof.json) binds the final packaged code
-and Sources tree to 248 focused tests, the complete 1,625-selection regression and 41 successful
-native interaction checks (21 distinct scenarios). Actual window checks include 25 same-identity
-result updates while expanded, 100 collapse/expand cycles, 25 refreshes during those cycles, five
-privacy on/off rounds and 15 settings close/reopen cycles. Fixtures are entirely fictitious.
-
-The final full regression passed all 45 groups without retries, failures or timeouts. Short post-test
-idle sampling returned to 0% CPU, and no new isolated-app crash reports were found. This is evidence
-for the exercised paths on one machine, not a long-term leak or schema-compatibility guarantee.
-A host disk-capacity interruption and initial harness selector assumptions are recorded separately
-in the receipt; incomplete attempts are excluded from the successful counts. The five real-session
-checks in the redacted transcript were also rerun against the same packaged code and original input.
+Set `CODEXBAR_TOOL_UI_PROOF_DIR` to an empty output directory when running
+`SpendToolActivityTests` to render production SwiftUI with synthetic operations in English/Chinese,
+light/dark, narrow/wide layouts and all filters. This does not launch the app or read personal logs.
+Historical contributor runtime receipts and illustrations remain in the history of PR #4363.
+The upgrade tests retain saved pricing, ledger rows, scan checkpoints, reports and database identity
+across compatible predecessor adoption, including when original logs have been removed.

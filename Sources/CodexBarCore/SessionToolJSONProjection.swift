@@ -107,7 +107,8 @@ struct SessionToolJSONProjection {
             // Set only after ':'; the key/colon itself must remain in valid JSON.
             self.pendingSkip = !Self.keys.contains(key)
         } else {
-            self.emit(self.tokenOverflow ? Array("null".utf8) : self.token)
+            // Oversized strings still carry presence: null would erase a recorded tool error.
+            self.emit(self.tokenOverflow ? Array((isString ? "\"\"" : "null").utf8) : self.token)
         }
     }
 

@@ -146,9 +146,6 @@ struct SpendToolActivityContent: View {
                     Text(spendToolOperationName(longest, hidePersonalInfo: self.hidePersonalInfo)).lineLimit(1)
                     Spacer(minLength: 4)
                     Text(spendToolDuration(longest)).monospacedDigit()
-                    if longest.timing == .recordedInterval {
-                        Text(L("spend_tools_interval")).foregroundStyle(.secondary)
-                    }
                 }
                 .font(.caption)
             }
