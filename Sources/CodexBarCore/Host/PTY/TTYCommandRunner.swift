@@ -13,7 +13,7 @@ private enum TTYCommandRunnerActiveProcessRegistry {
         var processGroup: pid_t?
     }
 
-    private final class State: @unchecked Sendable {
+    final class State: @unchecked Sendable {
         private let condition = NSCondition()
         private var processes: [pid_t: ProcessInfo] = [:]
         private var isShuttingDown = false
@@ -110,46 +110,8 @@ private enum TTYCommandRunnerActiveProcessRegistry {
     private static let shared = State()
     @TaskLocal private static var stateOverrideForTesting: State?
 
-    private static var current: State {
+    static var current: State {
         self.stateOverrideForTesting ?? self.shared
-    }
-
-    static func register(pid: pid_t, binary: String) -> Bool {
-        self.current.register(pid: pid, binary: binary)
-    }
-
-    static func beginLaunch() -> Bool {
-        self.current.beginLaunch()
-    }
-
-    static func endLaunch() {
-        self.current.endLaunch()
-    }
-
-    static func updateProcessGroup(pid: pid_t, processGroup: pid_t?) {
-        self.current.updateProcessGroup(pid: pid, processGroup: processGroup)
-    }
-
-    static func unregister(pid: pid_t) {
-        self.current.unregister(pid: pid)
-    }
-
-    static func drainForShutdown(onFenceSet: (() -> Void)? = nil)
-        -> [(pid: pid_t, binary: String, processGroup: pid_t?)]
-    {
-        self.current.drainForShutdown(onFenceSet: onFenceSet)
-    }
-
-    static func reset() {
-        self.current.reset()
-    }
-
-    static func count() -> Int {
-        self.current.count()
-    }
-
-    static func testTrackProcess(pid: pid_t, binary: String, processGroup: pid_t?) {
-        self.current.testTrackProcess(pid: pid, binary: binary, processGroup: processGroup)
     }
 
     static func withIsolatedStateForTesting<T>(_ operation: () throws -> T) rethrows -> T {
@@ -404,7 +366,7 @@ public struct TTYCommandRunner {
     public init() {}
 
     public static func terminateActiveProcessesForAppShutdown() {
-        let targets = TTYCommandRunnerActiveProcessRegistry.drainForShutdown()
+        let targets = TTYCommandRunnerActiveProcessRegistry.current.drainForShutdown()
         guard !targets.isEmpty else { return }
 
         let resolvedTargets = self.resolveShutdownTargets(
@@ -623,17 +585,17 @@ public struct TTYCommandRunner {
                 }
                 try? primaryHandle.close()
             }
-            TTYCommandRunnerActiveProcessRegistry.unregister(pid: launchedProcess.pid)
+            TTYCommandRunnerActiveProcessRegistry.current.unregister(pid: launchedProcess.pid)
         }
 
-        guard TTYCommandRunnerActiveProcessRegistry.beginLaunch() else {
+        guard TTYCommandRunnerActiveProcessRegistry.current.beginLaunch() else {
             cleanup()
             throw Error.launchFailed("App shutdown in progress")
         }
         var launchReservationHeld = true
         defer {
             if launchReservationHeld {
-                TTYCommandRunnerActiveProcessRegistry.endLaunch()
+                TTYCommandRunnerActiveProcessRegistry.current.endLaunch()
             }
         }
 
@@ -661,12 +623,12 @@ public struct TTYCommandRunner {
         }
 
         let pid = process.pid
-        guard TTYCommandRunnerActiveProcessRegistry.register(pid: pid, binary: binaryName) else {
+        guard TTYCommandRunnerActiveProcessRegistry.current.register(pid: pid, binary: binaryName) else {
             Self.log.debug("PTY launch blocked by shutdown fence", metadata: ["binary": binaryName])
             throw Error.launchFailed("App shutdown in progress")
         }
-        TTYCommandRunnerActiveProcessRegistry.updateProcessGroup(pid: pid, processGroup: process.processGroup)
-        TTYCommandRunnerActiveProcessRegistry.endLaunch()
+        TTYCommandRunnerActiveProcessRegistry.current.updateProcessGroup(pid: pid, processGroup: process.processGroup)
+        TTYCommandRunnerActiveProcessRegistry.current.endLaunch()
         launchReservationHeld = false
         Self.log.debug("PTY launched", metadata: ["binary": binaryName])
 
@@ -1245,31 +1207,31 @@ extension TTYCommandRunner {
 extension TTYCommandRunner {
     @discardableResult
     static func registerActiveProcessForAppShutdown(pid: pid_t, binary: String) -> Bool {
-        TTYCommandRunnerActiveProcessRegistry.register(pid: pid, binary: binary)
+        TTYCommandRunnerActiveProcessRegistry.current.register(pid: pid, binary: binary)
     }
 
     static func beginActiveProcessLaunchForAppShutdown() -> Bool {
-        TTYCommandRunnerActiveProcessRegistry.beginLaunch()
+        TTYCommandRunnerActiveProcessRegistry.current.beginLaunch()
     }
 
     static func endActiveProcessLaunchForAppShutdown() {
-        TTYCommandRunnerActiveProcessRegistry.endLaunch()
+        TTYCommandRunnerActiveProcessRegistry.current.endLaunch()
     }
 
     static func updateActiveProcessGroupForAppShutdown(pid: pid_t, processGroup: pid_t?) {
-        TTYCommandRunnerActiveProcessRegistry.updateProcessGroup(pid: pid, processGroup: processGroup)
+        TTYCommandRunnerActiveProcessRegistry.current.updateProcessGroup(pid: pid, processGroup: processGroup)
     }
 
     static func unregisterActiveProcessForAppShutdown(pid: pid_t) {
-        TTYCommandRunnerActiveProcessRegistry.unregister(pid: pid)
+        TTYCommandRunnerActiveProcessRegistry.current.unregister(pid: pid)
     }
 
     static func _test_resetTrackedProcesses() {
-        TTYCommandRunnerActiveProcessRegistry.reset()
+        TTYCommandRunnerActiveProcessRegistry.current.reset()
     }
 
     static func _test_trackProcess(pid: pid_t, binary: String, processGroup: pid_t?) {
-        TTYCommandRunnerActiveProcessRegistry.testTrackProcess(
+        TTYCommandRunnerActiveProcessRegistry.current.testTrackProcess(
             pid: pid,
             binary: binary,
             processGroup: processGroup)
@@ -1277,26 +1239,26 @@ extension TTYCommandRunner {
 
     @discardableResult
     static func _test_registerTrackedProcess(pid: pid_t, binary: String) -> Bool {
-        TTYCommandRunnerActiveProcessRegistry.register(pid: pid, binary: binary)
+        TTYCommandRunnerActiveProcessRegistry.current.register(pid: pid, binary: binary)
     }
 
     static func _test_trackedProcessCount() -> Int {
-        TTYCommandRunnerActiveProcessRegistry.count()
+        TTYCommandRunnerActiveProcessRegistry.current.count()
     }
 
     static func _test_beginTrackedProcessLaunch() -> Bool {
-        TTYCommandRunnerActiveProcessRegistry.beginLaunch()
+        TTYCommandRunnerActiveProcessRegistry.current.beginLaunch()
     }
 
     static func _test_endTrackedProcessLaunch() {
-        TTYCommandRunnerActiveProcessRegistry.endLaunch()
+        TTYCommandRunnerActiveProcessRegistry.current.endLaunch()
     }
 
     static func _test_drainTrackedProcessesForShutdown(
         onFenceSet: (() -> Void)? = nil)
         -> [(pid: pid_t, binary: String, processGroup: pid_t?)]
     {
-        TTYCommandRunnerActiveProcessRegistry.drainForShutdown(onFenceSet: onFenceSet)
+        TTYCommandRunnerActiveProcessRegistry.current.drainForShutdown(onFenceSet: onFenceSet)
     }
 
     static func _test_makeDrainTrackedProcessesForShutdownOperation(
