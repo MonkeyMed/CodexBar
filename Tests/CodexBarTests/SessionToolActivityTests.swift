@@ -3,6 +3,17 @@ import Testing
 @testable import CodexBarCore
 
 struct SessionToolActivityTests {
+    @Test(arguments: ["ImageGeneration", "ImageView", "Extension", "WebSearch"])
+    func `explicit failures remain visible for every supported operation`(type: String) async throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        try fixture.write([Self.record(id: "failed", type: type, extra: ["status": "failed"])])
+        let snapshot = try await SessionToolActivityStore().load(source: fixture.source)
+        let operation = try #require(snapshot.operations.first)
+        #expect(operation.outcome == .toolError)
+        #expect(operation.needsAttention)
+    }
+
     @Test(arguments: [32, 9000])
     func `error presence survives metadata string bounds`(length: Int) async throws {
         let fixture = try Fixture()

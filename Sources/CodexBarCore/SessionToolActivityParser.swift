@@ -85,7 +85,7 @@ enum SessionToolActivityParser {
                 (item["error"] != nil && !(item["error"] is NSNull))
             { return .toolError }
         }
-        if status == "failed", kind == .fileChange || kind == .command { return .toolError }
+        if status == "failed" { return .toolError }
         if status == "completed" || (kind == .command && self.integer(item["exit_code"]) == 0)
             || (kind == .dynamic && self.boolean(item["success"]) == true)
         { return .completed }
