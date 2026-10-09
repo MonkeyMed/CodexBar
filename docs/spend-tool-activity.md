@@ -39,9 +39,10 @@ size and modification date are checked before/after reads; stale byte offsets ar
 no tool activity work in routine billing refreshes and no new persistent database or dependency.
 
 The scanner's optional session-source descriptor changes the generated parser fingerprint but does
-not change stored billing rows. Databases from current main (`0d8f9504f8e63d0f`) and the stable
-0.73.0 release (`7ff985e81e281a11`) are adopted in place through the existing compatible-predecessor
-mechanism. Retained history, saved pricing, previous reports and scan checkpoints must survive.
+not change stored billing rows. Databases from current main (`379b799bb4b91683`), the previous tool
+inspection build (`7ce21041b7a36242`), earlier main (`0d8f9504f8e63d0f`), and the stable 0.73.0 release
+(`7ff985e81e281a11`) are adopted in place through the existing compatible-predecessor mechanism.
+Retained history, saved pricing, previous reports and scan checkpoints must survive.
 
 Each operation retains a short command preview and record position. Input/result bodies are read only
 when the user expands that operation, bounded to a 4 MiB record and shortened display text. Larger
